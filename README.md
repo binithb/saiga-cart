@@ -67,6 +67,9 @@ python bootstrap.py --preset github-scrum
 
 # SAFe (PIs) + Jira Cloud
 python bootstrap.py --preset jira-safe
+
+# Scrum + Azure DevOps
+python bootstrap.py --preset ado-scrum
 ```
 
 ---

@@ -831,7 +831,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, help="Path to existing workspace.yaml / config file")
     parser.add_argument("--output", type=Path, default=Path.cwd(), help="Target directory")
     parser.add_argument("--non-interactive", action="store_true", help="Run without prompts using defaults/presets")
-    parser.add_argument("--preset", choices=["github-scrum", "jira-safe"], help="Preset configuration")
+    parser.add_argument(
+        "--preset",
+        choices=["github-scrum", "jira-safe", "ado-scrum", "azure-devops"],
+        help="Preset configuration",
+    )
     return parser.parse_args()
 
 
@@ -864,6 +868,17 @@ def main() -> None:
             cadence_duration="8 weeks",
             tracker_type="jira",
             vcs_platform="gitlab",
+        )
+    elif args.preset in ("ado-scrum", "azure-devops"):
+        cfg = WorkspaceConfig(
+            name="Acme Azure DevOps Workspace",
+            slug="acme-ado-workspace",
+            planning_framework="scrum",
+            cadence_duration="2 weeks",
+            tracker_type="azure-devops",
+            tracker_base_url="https://dev.azure.com/acme-org",
+            tracker_project_key="ACME",
+            vcs_platform="azure-repos",
         )
     else:
         cfg = run_interactive_wizard()

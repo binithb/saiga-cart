@@ -29,12 +29,14 @@ beside their respective skill implementations.
 
 `tests/test_bootstrap_matrix.py` copies the template into a temporary
 directory, bootstraps it, then runs the generated workspace doctor and
-planning audit. It covers the two representative happy paths:
+planning audit. It covers the three representative happy paths:
 
 1. **`test_e2e_smoke_github_scrum_preset`**: **GitHub + Scrum + GitHub Issues** — a two-week Scrum workspace with
    GitHub issue skills retained and non-GitHub tracker skills pruned.
 2. **`test_e2e_smoke_jira_safe_preset`**: **GitLab + SAFe + Jira** — an eight-week PI workspace with Jira onboarding
    and status-sync skills retained and GitHub tracker skills pruned.
+3. **`test_e2e_smoke_ado_scrum_preset`**: **Azure DevOps + Scrum + Azure Repos** — a two-week Scrum workspace with
+   Azure DevOps onboarding skills retained and Jira/GitHub tracker skills pruned.
 
 The combinations are deliberately representative of the public/open-source
 and enterprise/multi-team audiences: GitHub describes itself as home to more

@@ -139,6 +139,62 @@ class TestBootstrapMatrix(unittest.TestCase):
         """Alias for test_e2e_smoke_jira_safe_preset."""
         return self.test_e2e_smoke_jira_safe_preset()
 
+    def test_e2e_smoke_ado_scrum_preset(self):
+        """Documented Smoke Path 3: Azure DevOps + Scrum Sprints + Azure Repos."""
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "ado-scrum-ws"
+            shutil.copytree(self.template_dir, target, ignore=shutil.ignore_patterns("tests", ".git"))
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(target / "bootstrap.py"),
+                    "--non-interactive",
+                    "--preset",
+                    "ado-scrum",
+                    "--output",
+                    str(target),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"Bootstrap failed:\n{res.stdout}\n{res.stderr}")
+
+            # Verify created files
+            self.assertTrue((target / "AGENTS.md").is_file())
+            self.assertTrue((target / "docs" / "planning" / "01" / "README.md").is_file())
+            self.assertTrue((target / ".github" / "skills" / "ado-work-item-onboard").is_dir())
+            self.assertFalse((target / ".github" / "skills" / "jira-story-onboard").exists())
+            self.assertFalse((target / ".github" / "skills" / "github-issue-onboard").exists())
+            self.assertIn(
+                'tracker:\n  type: "azure-devops"',
+                (target / "workspace.yaml").read_text(encoding="utf-8"),
+            )
+
+            # Run workspace doctor
+            doc_res = subprocess.run(
+                [sys.executable, str(target / "scripts" / "workspace_doctor.py")],
+                capture_output=True,
+                text=True,
+                cwd=target,
+            )
+            self.assertEqual(doc_res.returncode, 0, f"Doctor failed:\n{doc_res.stdout}\n{doc_res.stderr}")
+
+            # Run planning docs audit
+            audit_script = target / ".github" / "skills" / "planning-docs-audit" / "scripts" / "planning_docs_audit.py"
+            if audit_script.is_file():
+                audit_res = subprocess.run(
+                    [sys.executable, str(audit_script), "--root", str(target)],
+                    capture_output=True,
+                    text=True,
+                    cwd=target,
+                )
+                self.assertEqual(audit_res.returncode, 0, f"Planning docs audit failed:\n{audit_res.stdout}\n{audit_res.stderr}")
+
+    def test_preset_ado_scrum(self):
+        """Alias for test_e2e_smoke_ado_scrum_preset."""
+        return self.test_e2e_smoke_ado_scrum_preset()
+
 
 if __name__ == "__main__":
     unittest.main()
