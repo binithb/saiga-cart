@@ -2,8 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Presentation](https://img.shields.io/badge/Presentation-GitHub%20Pages-brightgreen)](https://binithb.github.io/saiga-cart/)
 
 An open-source template and interactive bootstrapper for **scaling AI development across multiple repositories**.
+
+> 🌐 **Interactive Slide Deck & Overview**: Explore the live visual presentation and architecture walkthrough at **[https://binithb.github.io/saiga-cart/](https://binithb.github.io/saiga-cart/)**.
 
 Named after the enduring steppe antelope (**saiga**) and the collaborative load pulling of a team (**cart**), `saiga-cart` gives AI agents (GitHub Copilot, Claude Code, Cursor, Windsurf) and software engineers durable, synchronized context across multiple related repositories and structured delivery planning.
 
