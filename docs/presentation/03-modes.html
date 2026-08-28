@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Comparing the two valid operating modes of AI-assisted engineering: typing helper vs. system-aware partner.">
+  <title>The Choice · Two Operating Modes</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <span>saiga-cart</span>
+        <span class="brand-badge">Guide</span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="index.html"><span class="nav-num">01</span> Start</a>
+        <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
+        <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
+        <a href="03-modes.html" aria-current="page"><span class="nav-num">04</span> Modes</a>
+        <a href="04-four-artifacts.html"><span class="nav-num">05</span> 4 Files</a>
+        <a href="05-colocation.html"><span class="nav-num">06</span> Co-location</a>
+        <a href="06-roles.html"><span class="nav-num">07</span> Roles</a>
+        <a href="07-lifecycle.html"><span class="nav-num">08</span> Lifecycle</a>
+        <a href="08-payoff.html"><span class="nav-num">09</span> Payoff</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content">
+    <header class="page-head">
+      <div class="page-meta">
+        <span class="kicker active">The Choice · 4 / 9</span>
+      </div>
+      <h1>Two Operating Modes</h1>
+      <p class="lede">AI-assisted engineering operates effectively at two distinct scales. Problems arise only when teams ask for Mode B results with Mode A tooling.</p>
+      
+      <div class="takeaway-box">
+        <div class="takeaway-icon">🎯</div>
+        <div class="takeaway-content">
+          <strong>The governing rule:</strong> Context and verification must match the blast radius of the task. Local typing needs zero workspace overhead; cross-repo features require durable context.
+        </div>
+      </div>
+    </header>
+
+    <section aria-labelledby="modes-heading">
+      <span class="section-label">Side-by-Side Comparison</span>
+      <h2 id="modes-heading">Matching Method to Scope</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <span class="card-number">Mode A</span>
+          <h3>Typing Helper</h3>
+          <p><strong>Role:</strong> Autocomplete and localized snippet generator.</p>
+          <p><strong>Context:</strong> Active open file and immediate clipboard.</p>
+          <p><strong>Human Role:</strong> Acts as the system firewall and mental model holder.</p>
+          <p><strong>Ideal For:</strong> Boilerplate, regexes, unit test scaffolding, single-file edits.</p>
+        </article>
+
+        <article class="card success span-6">
+          <span class="card-number">Mode B</span>
+          <h3>System-Aware Partner</h3>
+          <p><strong>Role:</strong> Autonomous agent modifying contracts and implementations.</p>
+          <p><strong>Context:</strong> Multi-root workspace, committed architecture, and active plans.</p>
+          <p><strong>Human Role:</strong> Navigator setting goals, verifying evidence, and approving PRs.</p>
+          <p><strong>Ideal For:</strong> Feature delivery, API refactors, multi-repo migrations, DoR audits.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="mode-matrix">
+      <span class="section-label">Operational Matrix</span>
+      <h2 id="mode-matrix">When to Use Each Mode</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Task Dimension</th>
+              <th>Mode A: Helper</th>
+              <th>Mode B: Partner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Scope of Change</strong></td>
+              <td>Single function / single file</td>
+              <td>Multiple files / sibling repositories</td>
+            </tr>
+            <tr>
+              <td><strong>Context Required</strong></td>
+              <td>Nearby syntax</td>
+              <td>System architecture, ADRs, active plan</td>
+            </tr>
+            <tr>
+              <td><strong>Verification</strong></td>
+              <td>Immediate visual check</td>
+              <td>Automated test suite, pre-commit audit</td>
+            </tr>
+            <tr>
+              <td><strong>Durable Artifacts</strong></td>
+              <td>None</td>
+              <td><code>AGENTS.md</code>, <code>docs/planning/</code>, <code>docs/adr/</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="prev" href="02-context-tax.html">
+        <span aria-hidden="true">←</span>
+        <div>
+          <span class="page-nav-meta">Previous · Page 3</span>
+          <span>The Cost — The Daily Context Tax</span>
+        </div>
+      </a>
+      <a class="next" href="04-four-artifacts.html">
+        <div>
+          <span class="page-nav-meta">Next · Page 5</span>
+          <span>The Practice — Four Committed Files</span>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="site-footer">
+    <span>saiga-cart Guide · Page 4 of 9</span>
+    <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
+  </footer>
+</body>
+</html>

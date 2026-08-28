@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {
+      "name": "00-workspace-planning",
+      "path": "."
+    }{{CODE_WORKSPACE_SIBLINGS}}
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/.DS_Store": true
+    }
+  }
+}

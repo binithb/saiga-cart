@@ -1,0 +1,9 @@
+# GitHub Copilot Instructions — {{WORKSPACE_NAME|default("AI Workspace")}}
+
+This workspace provides multi-repository context and structured AI delivery planning.
+
+## Operating Principles
+1. **Instruction Hierarchy**: Follow `AGENTS.md` > `docs/workflow.md` > `docs/architecture.md` > active story files.
+2. **Planning Framework**: Planning items live in `docs/planning/`. Stories map 1:1 with remote issues.
+3. **Definition of Ready**: Only pick up stories that are sized `Small` or `Medium` with `Definition of Ready | Done`.
+4. **Tool Procedures**: Consult `.github/skills/README.md` for task-specific workflows (e.g. `pr-create`, `story-refiner`, `planning-docs-audit`).

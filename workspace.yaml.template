@@ -1,0 +1,35 @@
+# Workspace Configuration Schema
+version: 1
+workspace:
+  name: "{{WORKSPACE_NAME}}"
+  slug: "{{WORKSPACE_SLUG}}"
+  description: "{{WORKSPACE_DESC}}"
+  organization: "{{ORGANIZATION}}"
+
+planning:
+  framework: "{{PLANNING_FRAMEWORK}}" # safe | scrum | shape-up | kanban
+  cadence_duration: "{{CADENCE_DURATION}}" # e.g. "2 weeks", "2 months"
+  story_sizing:
+    threshold_for_split: "Large"
+    enforce_dor: true
+  adr_enabled: true
+
+tracker:
+  type: "{{TRACKER_TYPE}}" # jira | github | gitlab | azure-devops | none
+  base_url: "{{TRACKER_BASE_URL}}"
+  project_key: "{{TRACKER_PROJECT_KEY}}"
+  bidirectional_links: true
+
+vcs:
+  platform: "{{VCS_PLATFORM}}" # github | gitlab | bitbucket | azure-repos
+  default_branch: "main"
+  consensus_review_enabled: true
+  dod_gate_enabled: true
+
+siblings:
+{{SIBLINGS_YAML_LIST}}
+
+agents:
+  copilot: true
+  claude: true
+  cursor: true

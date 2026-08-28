@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Governance and division of labor between human engineer and AI agent: who steers, who drafts, and who owns irreversibility.">
+  <title>Governance · Human Navigator, AI Driver</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <span>saiga-cart</span>
+        <span class="brand-badge">Guide</span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="index.html"><span class="nav-num">01</span> Start</a>
+        <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
+        <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
+        <a href="03-modes.html"><span class="nav-num">04</span> Modes</a>
+        <a href="04-four-artifacts.html"><span class="nav-num">05</span> 4 Files</a>
+        <a href="05-colocation.html"><span class="nav-num">06</span> Co-location</a>
+        <a href="06-roles.html" aria-current="page"><span class="nav-num">07</span> Roles</a>
+        <a href="07-lifecycle.html"><span class="nav-num">08</span> Lifecycle</a>
+        <a href="08-payoff.html"><span class="nav-num">09</span> Payoff</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content">
+    <header class="page-head">
+      <div class="page-meta">
+        <span class="kicker active">Governance · 7 / 9</span>
+      </div>
+      <h1>Human Navigator, AI Driver</h1>
+      <p class="lede">Clear division of responsibility prevents both micro-management fatigue and runaway unreviewed code generation.</p>
+      
+      <div class="takeaway-box">
+        <div class="takeaway-icon">🧭</div>
+        <div class="takeaway-content">
+          <strong>The irreversibility principle:</strong> Humans own the points of irreversibility (architecture choices, merge approvals, deployments). AI handles reversible drafting, refactoring, and test execution.
+        </div>
+      </div>
+    </header>
+
+    <section aria-labelledby="roles-comparison">
+      <span class="section-label">Division of Labor</span>
+      <h2 id="roles-comparison">Two Complementary Roles</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <span class="card-number">Human Engineer</span>
+          <h3>The Navigator</h3>
+          <ul>
+            <li><strong>Sets Direction:</strong> Defines the problem, scope limits, and business goals.</li>
+            <li><strong>Records Constraints:</strong> Writes ADRs and key architectural decisions.</li>
+            <li><strong>Reviews Evidence:</strong> Evaluates diffs, test logs, and security implications.</li>
+            <li><strong>Approves Merges:</strong> Retains final authority over git main and releases.</li>
+          </ul>
+        </article>
+
+        <article class="card span-6">
+          <span class="card-number">AI Agent</span>
+          <h3>The Driver</h3>
+          <ul>
+            <li><strong>Drafts Implementations:</strong> Generates code, tests, and documentation rapidly.</li>
+            <li><strong>Executes &amp; Self-Corrects:</strong> Runs compilers, linters, and tests; fixes its own errors.</li>
+            <li><strong>Explores Options:</strong> Proposes candidate implementations within stated constraints.</li>
+            <li><strong>Operates Reversibly:</strong> Works entirely in feature branches and draft PRs.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="speed-dial">
+      <div class="callout info">
+        <h3 id="speed-dial" style="margin-top:0;">The Autonomy Speed Dial</h3>
+        <p>Calibrate autonomy by cost of reversal: for cheap-to-undo work (scratch branches, unit test additions), let the AI run autonomously. For expensive-to-undo work (database migrations, public APIs, auth flows), gate with explicit human consensus checks.</p>
+      </div>
+    </section>
+
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="prev" href="05-colocation.html">
+        <span aria-hidden="true">←</span>
+        <div>
+          <span class="page-nav-meta">Previous · Page 6</span>
+          <span>Architecture — Co-location &amp; Hierarchy</span>
+        </div>
+      </a>
+      <a class="next" href="07-lifecycle.html">
+        <div>
+          <span class="page-nav-meta">Next · Page 8</span>
+          <span>Delivery Flow — From Aim to Merge</span>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="site-footer">
+    <span>saiga-cart Guide · Page 7 of 9</span>
+    <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
+  </footer>
+</body>
+</html>

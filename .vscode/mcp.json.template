@@ -1,0 +1,22 @@
+{
+  "inputs": [
+    // Configure tokens as needed:
+    // {
+    //   "type": "promptString",
+    //   "id": "github-token",
+    //   "description": "GitHub Personal Access Token (repo, workflow)",
+    //   "password": true
+    // }
+  ],
+  "servers": {
+    // Example MCP server configurations:
+    // "github": {
+    //   "type": "stdio",
+    //   "command": "npx",
+    //   "args": ["-y", "@modelcontextprotocol/server-github"],
+    //   "env": {
+    //     "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github-token}"
+    //   }
+    // }
+  }
+}

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="The four essential categories of plain-text committed files that ground AI agents: reality, intent, reasons, and evidence.">
+  <title>The Practice · Four Committed Files</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <span>saiga-cart</span>
+        <span class="brand-badge">Guide</span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="index.html"><span class="nav-num">01</span> Start</a>
+        <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
+        <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
+        <a href="03-modes.html"><span class="nav-num">04</span> Modes</a>
+        <a href="04-four-artifacts.html" aria-current="page"><span class="nav-num">05</span> 4 Files</a>
+        <a href="05-colocation.html"><span class="nav-num">06</span> Co-location</a>
+        <a href="06-roles.html"><span class="nav-num">07</span> Roles</a>
+        <a href="07-lifecycle.html"><span class="nav-num">08</span> Lifecycle</a>
+        <a href="08-payoff.html"><span class="nav-num">09</span> Payoff</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content">
+    <header class="page-head">
+      <div class="page-meta">
+        <span class="kicker active">The Practice · 5 / 9</span>
+      </div>
+      <h1>Four Committed Files</h1>
+      <p class="lede">To eliminate drift, replace chat memory with four small, plain-text categories committed directly in git beside the code. Every session loads them automatically.</p>
+      
+      <div class="takeaway-box">
+        <div class="takeaway-icon">📁</div>
+        <div class="takeaway-content">
+          <strong>The golden rule:</strong> "The plan isn't real until it's a committed file." Nothing load-bearing should live only in chat scrollback or ephemeral memory.
+        </div>
+      </div>
+    </header>
+
+    <section aria-labelledby="artifacts-heading">
+      <span class="section-label">The 4 Categories</span>
+      <h2 id="artifacts-heading">What Earns a Place in the Repository</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <span class="card-number">01 · Reality</span>
+          <h3>What Is True Now</h3>
+          <p>Current architecture, directory contracts, and repository ownership. Updated in the same PR that changes system structure.</p>
+          <p><strong>Canonical file:</strong> <code>docs/architecture.md</code></p>
+        </article>
+
+        <article class="card span-6">
+          <span class="card-number">02 · Intent</span>
+          <h3>What We Are Building Next</h3>
+          <p>The active delivery increment (PI, sprint, cycle, or milestone) with explicit acceptance criteria, story sizing, and DoR status.</p>
+          <p><strong>Canonical file:</strong> <code>docs/planning/01/</code></p>
+        </article>
+
+        <article class="card span-6">
+          <span class="card-number">03 · Reasons</span>
+          <h3>Why We Chose It</h3>
+          <p>Append-only Architectural Decision Records (ADRs). Superseded rather than edited, preventing resolved debates from reopening.</p>
+          <p><strong>Canonical file:</strong> <code>docs/adr/0001-*.md</code></p>
+        </article>
+
+        <article class="card span-6">
+          <span class="card-number">04 · Evidence</span>
+          <h3>What Counts as Done</h3>
+          <p>Executable verification commands and pass/fail criteria. "The agent says it works" is not verification — only test commands prove it.</p>
+          <p><strong>Canonical file:</strong> <code>docs/workflow.md</code> (DoD)</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="hygiene-heading">
+      <div class="callout success">
+        <h3 id="hygiene-heading" style="margin-top:0;">Documentation Hygiene Rule</h3>
+        <p>Keep files concise and single-purpose. Stale documentation actively degrades AI reasoning by injecting hallucinations. If a statement stops being true, update or delete it in the same PR.</p>
+      </div>
+    </section>
+
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="prev" href="03-modes.html">
+        <span aria-hidden="true">←</span>
+        <div>
+          <span class="page-nav-meta">Previous · Page 4</span>
+          <span>The Choice — Two Operating Modes</span>
+        </div>
+      </a>
+      <a class="next" href="05-colocation.html">
+        <div>
+          <span class="page-nav-meta">Next · Page 6</span>
+          <span>Architecture — Co-location &amp; Hierarchy</span>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="site-footer">
+    <span>saiga-cart Guide · Page 5 of 9</span>
+    <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
+  </footer>
+</body>
+</html>
