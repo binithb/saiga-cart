@@ -116,6 +116,30 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+.brand-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.hero-banner-container {
+  margin: 24px 0 32px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line-strong);
+  background: #060b18;
+}
+
+.hero-banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+}
+
 .brand-badge {
   padding: 2px 7px;
   background: var(--primary-light);

@@ -1,5 +1,9 @@
 # 🛷 saiga-cart: AI-Native Multi-Repository Workspace
 
+<p align="center">
+  <img src="docs/presentation/assets/saiga-cart-banner.svg" alt="saiga-cart Banner: A cart pulled by 3 rows of saigas across a multi-repository workspace" width="100%">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Presentation](https://img.shields.io/badge/Presentation-GitHub%20Pages-brightgreen)](https://binithb.github.io/saiga-cart/)

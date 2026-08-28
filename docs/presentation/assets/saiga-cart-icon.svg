@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="iconBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b132b"/>
+      <stop offset="50%" stop-color="#111d4a"/>
+      <stop offset="100%" stop-color="#080e21"/>
+    </linearGradient>
+
+    <linearGradient id="iconBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <linearGradient id="saigaBody1" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+
+    <linearGradient id="saigaBody2" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="saigaBelly" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+
+    <linearGradient id="hornGrad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="40%" stop-color="#fef3c7"/>
+      <stop offset="70%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#fffbeb"/>
+    </linearGradient>
+
+    <linearGradient id="cartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="50%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="glowCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#a5f3fc"/>
+    </linearGradient>
+
+    <linearGradient id="repoBox1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="repoBox2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <linearGradient id="repoBox3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+
+    <filter id="iconGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Container -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#iconBgGrad)" stroke="url(#iconBorderGrad)" stroke-width="4"/>
+
+  <!-- Tech Grid Background -->
+  <g opacity="0.18">
+    <circle cx="120" cy="120" r="2" fill="#38bdf8"/>
+    <circle cx="240" cy="90" r="2.5" fill="#38bdf8"/>
+    <circle cx="380" cy="130" r="2" fill="#38bdf8"/>
+    <circle cx="430" cy="220" r="2.5" fill="#38bdf8"/>
+    <line x1="120" y1="120" x2="240" y2="90" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="240" y1="90" x2="380" y2="130" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="380" y1="130" x2="430" y2="220" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3"/>
+  </g>
+
+  <!-- Ground Plane / Motion Lines -->
+  <g opacity="0.4">
+    <path d="M 40 400 Q 200 410 472 400" stroke="#0284c7" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 80 416 Q 260 422 440 416" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="8,6" fill="none"/>
+    <path d="M 140 430 Q 300 434 400 430" stroke="#818cf8" stroke-width="1" stroke-dasharray="4,6" fill="none"/>
+  </g>
+
+  <!-- ==================== THE CART ==================== -->
+  <g id="cart" transform="translate(10, 20)">
+    <!-- Chassis -->
+    <path d="M 52 285 L 175 285 L 165 330 L 62 330 Z" fill="url(#cartGrad)" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- Luminous Railing -->
+    <path d="M 48 275 L 180 275" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+    <line x1="55" y1="275" x2="55" y2="285" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="95" y1="275" x2="95" y2="285" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="135" y1="275" x2="135" y2="285" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="175" y1="275" x2="175" y2="285" stroke="#38bdf8" stroke-width="2"/>
+
+    <!-- Context / Repository Boxes (AI Cargo) -->
+    <!-- Core Repo (Cyan) -->
+    <rect x="62" y="225" width="46" height="48" rx="6" fill="url(#repoBox1)" stroke="#e0f2fe" stroke-width="1.5"/>
+    <path d="M 73 249 L 85 240 L 97 249 L 85 258 Z" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="85" cy="249" r="2.5" fill="#ffffff"/>
+
+    <!-- Sibling Repo (Emerald) -->
+    <rect x="114" y="235" width="48" height="38" rx="6" fill="url(#repoBox2)" stroke="#d1fae5" stroke-width="1.5"/>
+    <line x1="124" y1="254" x2="152" y2="254" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="124" y1="260" x2="142" y2="260" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- AI Directives / AGENTS.md (Purple) -->
+    <rect x="85" y="185" width="44" height="38" rx="5" fill="url(#repoBox3)" stroke="#ede9fe" stroke-width="1.5"/>
+    <path d="M 107 194 Q 107 204 117 204 Q 107 204 107 214 Q 107 204 97 204 Q 107 204 107 194 Z" fill="#ffffff"/>
+
+    <!-- Wheels -->
+    <g transform="translate(80, 345)">
+      <circle cx="0" cy="0" r="32" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+      <circle cx="0" cy="0" r="22" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="8" fill="#38bdf8" filter="url(#iconGlow)"/>
+      <line x1="-28" y1="0" x2="28" y2="0" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="0" y1="-28" x2="0" y2="28" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="-20" y1="-20" x2="20" y2="20" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="-20" y1="20" x2="20" y2="-20" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+    </g>
+    <g transform="translate(150, 345)">
+      <circle cx="0" cy="0" r="32" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+      <circle cx="0" cy="0" r="22" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="8" fill="#38bdf8" filter="url(#iconGlow)"/>
+      <line x1="-28" y1="0" x2="28" y2="0" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="0" y1="-28" x2="0" y2="28" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="-20" y1="-20" x2="20" y2="20" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+      <line x1="-20" y1="20" x2="20" y2="-20" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+    </g>
+
+    <!-- Shaft -->
+    <path d="M 165 320 L 255 295" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- ==================== SAIGA 1 (Background Saiga) ==================== -->
+  <g id="saiga-bg" transform="translate(205, 140) scale(0.92)" opacity="0.88">
+    <path d="M 50 160 L 30 210 L 18 250" stroke="#b45309" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 80 160 L 70 205 L 85 248" stroke="#b45309" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 145 155 L 165 200 L 195 240" stroke="#b45309" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 130 155 L 140 195 L 155 245" stroke="#92400e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 40 150 Q 95 130 145 145 Q 160 170 140 185 Q 90 190 45 175 Z" fill="url(#saigaBody1)"/>
+    <path d="M 135 150 Q 155 115 175 95 Q 190 90 205 102 Q 215 115 210 130 Q 190 140 155 165 Z" fill="url(#saigaBody1)"/>
+    <path d="M 195 98 Q 218 95 224 110 Q 228 126 215 136 Q 200 140 190 130 Z" fill="#b45309"/>
+    <path d="M 172 96 Q 166 60 185 30 Q 192 18 190 12 Q 186 28 178 55 Q 174 75 170 96 Z" fill="url(#hornGrad)"/>
+    <path d="M 180 94 Q 176 58 196 26 Q 204 14 202 8 Q 197 25 188 52 Q 183 74 178 94 Z" fill="url(#hornGrad)"/>
+    <line x1="175" y1="75" x2="182" y2="73" stroke="#92400e" stroke-width="1.5"/>
+    <line x1="178" y1="58" x2="186" y2="55" stroke="#92400e" stroke-width="1.5"/>
+    <line x1="184" y1="42" x2="192" y2="39" stroke="#92400e" stroke-width="1.5"/>
+    <circle cx="186" cy="105" r="3.5" fill="#0f172a"/>
+    <circle cx="187.5" cy="103.5" r="1.2" fill="#ffffff"/>
+  </g>
+
+  <!-- ==================== SAIGA 2 (Foreground Saiga) ==================== -->
+  <g id="saiga-fg" transform="translate(245, 155)">
+    <path d="M 50 165 L 25 215 L 8 255" stroke="#92400e" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <polygon points="6,252 14,258 7,260" fill="#0f172a"/>
+    <path d="M 75 165 L 62 210 L 78 258" stroke="#d97706" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <polygon points="76,255 84,260 76,263" fill="#0f172a"/>
+    <path d="M 135 160 L 148 205 L 165 255" stroke="#b45309" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <polygon points="163,252 171,257 163,260" fill="#0f172a"/>
+    <path d="M 152 158 L 178 200 L 215 238" stroke="#f59e0b" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <polygon points="213,234 222,240 215,244" fill="#0f172a"/>
+
+    <path d="M 40 155 Q 95 132 155 148 Q 170 178 145 195 Q 92 202 42 182 Z" fill="url(#saigaBody2)"/>
+    <path d="M 52 175 Q 98 196 142 188 Q 155 178 152 165 Q 120 162 70 162 Q 50 165 52 175 Z" fill="url(#saigaBelly)" opacity="0.9"/>
+    <path d="M 40 158 Q 30 162 26 172 Q 33 175 42 168 Z" fill="#d97706"/>
+
+    <path d="M 140 155 Q 162 118 185 96 Q 202 92 218 105 Q 228 120 220 138 Q 198 150 160 175 Z" fill="url(#saigaBody2)"/>
+    <path d="M 160 150 Q 175 125 195 110 Q 205 120 198 138 Q 185 156 160 175 Z" fill="url(#saigaBelly)" opacity="0.7"/>
+
+    <!-- Bulbous Snout -->
+    <path d="M 206 98 Q 234 94 242 112 Q 248 130 232 142 Q 215 145 204 134 Q 215 120 206 98 Z" fill="#d97706"/>
+    <path d="M 235 128 Q 238 135 231 138" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+    <ellipse cx="196" cy="108" rx="5" ry="4" fill="#0f172a"/>
+    <circle cx="198" cy="106" r="1.8" fill="#ffffff"/>
+    <path d="M 175 98 Q 165 92 162 82 Q 172 86 178 94 Z" fill="#d97706"/>
+
+    <!-- Horns -->
+    <path d="M 182 96 Q 175 56 198 22 Q 206 8 204 2 Q 198 20 188 50 Q 182 72 178 96 Z" fill="url(#hornGrad)"/>
+    <path d="M 192 94 Q 186 52 212 18 Q 222 4 219 -2 Q 213 16 202 48 Q 195 72 188 94 Z" fill="url(#hornGrad)" filter="url(#iconGlow)"/>
+    
+    <line x1="187" y1="76" x2="197" y2="72" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+    <line x1="192" y1="58" x2="203" y2="54" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+    <line x1="198" y1="42" x2="210" y2="38" stroke="#b45309" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="206" y1="26" x2="216" y2="22" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Collar -->
+    <ellipse cx="162" cy="162" rx="8" ry="16" fill="none" stroke="#38bdf8" stroke-width="3" transform="rotate(-25, 162, 162)" filter="url(#iconGlow)"/>
+  </g>
+
+  <!-- Energy Harness -->
+  <g filter="url(#iconGlow)">
+    <path d="M 185 305 Q 260 280 395 285" fill="none" stroke="url(#glowCyan)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 185 315 Q 280 295 350 270" fill="none" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="395" cy="285" r="4" fill="#a5f3fc"/>
+    <circle cx="350" cy="270" r="3.5" fill="#c7d2fe"/>
+  </g>
+
+  <!-- Particles -->
+  <g opacity="0.85">
+    <circle cx="450" cy="260" r="3" fill="#38bdf8" filter="url(#iconGlow)"/>
+    <circle cx="475" cy="230" r="2" fill="#a5f3fc"/>
+    <circle cx="435" cy="200" r="2.5" fill="#818cf8"/>
+    <circle cx="465" cy="310" r="2" fill="#38bdf8"/>
+    <line x1="430" y1="260" x2="445" y2="260" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="455" y1="230" x2="470" y2="230" stroke="#a5f3fc" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+</svg>
