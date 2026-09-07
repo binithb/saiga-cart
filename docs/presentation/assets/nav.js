@@ -13,8 +13,9 @@ var pages = [
 ];
 
 var currentFile = window.location.pathname.split("/").pop() || "index.html";
+var isManifesto = currentFile === "ai-agile-manifesto.html";
 var currentIndex = pages.findIndex(function (page) { return page.file === currentFile; });
-if (currentIndex === -1) currentIndex = 0;
+if (currentIndex === -1 && !isManifesto) currentIndex = 0;
 
 document.querySelectorAll(".topnav").forEach(function (nav) {
   nav.innerHTML = pages.map(function (page, index) {
@@ -24,11 +25,17 @@ document.querySelectorAll(".topnav").forEach(function (nav) {
   }).join("");
 });
 
-var kicker = document.querySelector(".kicker");
-if (kicker) kicker.textContent = pages[currentIndex].kicker + " - " + (currentIndex + 1) + " / " + pages.length;
-
-document.querySelectorAll(".site-footer > span:first-child").forEach(function (footer) {
-  footer.textContent = "saiga-cart Guide - Page " + (currentIndex + 1) + " of " + pages.length;
+// Keep this reading route outside the numbered, horizontally scrolling guide.
+document.querySelectorAll(".topbar").forEach(function (topbar) {
+  var utility = topbar.querySelector(".utility-nav");
+  if (!utility) {
+    utility = document.createElement("nav");
+    utility.className = "utility-nav";
+    utility.setAttribute("aria-label", "Manifesto");
+    topbar.appendChild(utility);
+  }
+  utility.innerHTML = '<a href="ai-agile-manifesto.html"' +
+    (isManifesto ? ' aria-current="page"' : "") + '>Manifesto</a>';
 });
 
 function setPageLink(link, page, prefix) {
@@ -40,17 +47,27 @@ function setPageLink(link, page, prefix) {
   if (title) title.textContent = page.title;
 }
 
-setPageLink(document.querySelector(".page-nav .prev"), pages[currentIndex - 1], "Previous");
-setPageLink(document.querySelector(".page-nav .next"), pages[currentIndex + 1], "Next");
+// The manifesto retains its static heading, footer, and ordinary reading links.
+if (!isManifesto) {
+  var kicker = document.querySelector(".kicker");
+  if (kicker) kicker.textContent = pages[currentIndex].kicker + " - " + (currentIndex + 1) + " / " + pages.length;
 
-document.documentElement.dataset.keyboardNav = "ready";
-document.addEventListener("keydown", function (event) {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  var tagName = event.target && event.target.tagName;
-  if (tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(tagName)) return;
+  document.querySelectorAll(".site-footer > span:first-child").forEach(function (footer) {
+    footer.textContent = "saiga-cart Guide - Page " + (currentIndex + 1) + " of " + pages.length;
+  });
 
-  var destination = null;
-  if (event.key === "ArrowLeft") destination = document.querySelector(".page-nav .prev");
-  if (event.key === "ArrowRight") destination = document.querySelector(".page-nav .next");
-  if (destination && destination.href) window.location.href = destination.href;
-});
+  setPageLink(document.querySelector(".page-nav .prev"), pages[currentIndex - 1], "Previous");
+  setPageLink(document.querySelector(".page-nav .next"), pages[currentIndex + 1], "Next");
+
+  document.documentElement.dataset.keyboardNav = "ready";
+  document.addEventListener("keydown", function (event) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var tagName = event.target && event.target.tagName;
+    if (tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(tagName)) return;
+
+    var destination = null;
+    if (event.key === "ArrowLeft") destination = document.querySelector(".page-nav .prev");
+    if (event.key === "ArrowRight") destination = document.querySelector(".page-nav .next");
+    if (destination && destination.href) window.location.href = destination.href;
+  });
+}

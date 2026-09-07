@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A practical guide to scaling AI-assisted development across teams and multi-repository software systems.">
-  <title>Scaling AI in Real Software · Overview</title>
+  <meta name="description" content="Explore the AI Agile Manifesto and saiga-cart: a practical guide and workspace toolkit for shared understanding and AI-assisted software delivery.">
+  <title>Scaling AI in Real Software · AI Agile Manifesto &amp; saiga-cart</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,12 +22,17 @@
         <a href="index.html" aria-current="page"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-modes.html"><span class="nav-num">04</span> Modes</a>
-        <a href="04-four-artifacts.html"><span class="nav-num">05</span> 4 Files</a>
-        <a href="05-colocation.html"><span class="nav-num">06</span> Co-location</a>
-        <a href="06-roles.html"><span class="nav-num">07</span> Roles</a>
-        <a href="07-lifecycle.html"><span class="nav-num">08</span> Lifecycle</a>
-        <a href="08-payoff.html"><span class="nav-num">09</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
+        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
+        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
+        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
+        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
+        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
+      </nav>
+      <nav class="utility-nav" aria-label="Manifesto">
+        <a href="ai-agile-manifesto.html">Manifesto</a>
       </nav>
     </div>
   </header>
@@ -38,23 +43,35 @@
         <span class="kicker active">Start · 1 / 11</span>
       </div>
       <h1>Scaling AI in Real Software</h1>
-      <p class="lede">AI coding models have made tremendous leaps in capability, but raw model power without a shared way of working creates friction. This guide explains how to turn AI capability into durable, cross-repository software engineering.</p>
+      <p class="lede">Faster implementation can carry misunderstood customer needs further. The AI Agile Manifesto starts with shared understanding; saiga-cart is a practical workspace toolkit for carrying that understanding into durable engineering context and software delivery.</p>
+      <div class="site-actions">
+        <a class="action-primary" href="ai-agile-manifesto.html">Read the AI Agile Manifesto</a>
+        <a class="action-secondary" href="01-problem.html">Explore the practical guide</a>
+        <a href="https://github.com/binithb/saiga-cart#-quickstart-bootstrapping-a-new-workspace">Get started on GitHub</a>
+      </div>
       
       <div class="hero-banner-container">
         <img src="assets/saiga-cart-banner.svg" alt="saiga-cart: A cart pulled by 3 rows of saigas across a multi-repository workspace" class="hero-banner-img" width="1200" height="460">
       </div>
 
-      <div class="takeaway-box">
-        <div class="takeaway-icon">💡</div>
-        <div class="takeaway-content">
-          <strong>The core insight:</strong> AI tools matured faster than our working methods. Ad hoc prompting works for small local tasks, but real projects require durable, committed context that survives across sessions and teammates.
-        </div>
-      </div>
+      <section class="callout info manifesto-feature" aria-labelledby="manifesto-title">
+        <span class="section-label">Our starting point</span>
+        <h2 id="manifesto-title">AI Agile Manifesto</h2>
+        <p>AI can help us build faster. Customer discovery and feedback help us find out whether we are building the right thing.</p>
+        <ul class="manifesto-values">
+          <li><strong>Shared understanding over individual prompting speed</strong></li>
+          <li><strong>Useful outcomes over implementation speed</strong></li>
+          <li><strong>Customer discovery over detailed instructions</strong></li>
+          <li><strong>Learning and adaptation over uninterrupted execution</strong></li>
+        </ul>
+        <p><a href="ai-agile-manifesto.html">Read the full manifesto: four values and twelve principles</a></p>
+      </section>
     </header>
 
     <section aria-labelledby="core-pillars">
       <span class="section-label">The Core Capabilities</span>
       <h2 id="core-pillars">Two Capabilities Every AI Project Needs</h2>
+      <p>saiga-cart supports the practice with shared context and delivery planning beside the code.</p>
       <div class="grid">
         <article class="card span-6">
           <span class="card-number">01</span>
