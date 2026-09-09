@@ -159,6 +159,9 @@ button:focus-visible {
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding: 4px 0;
+  /* Fade the edges so it's visually clear the list scrolls when it overflows. */
+  mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
 }
 
 .topnav::-webkit-scrollbar {

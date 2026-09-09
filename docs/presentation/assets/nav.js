@@ -17,12 +17,39 @@ var isManifesto = currentFile === "ai-agile-manifesto.html";
 var currentIndex = pages.findIndex(function (page) { return page.file === currentFile; });
 if (currentIndex === -1 && !isManifesto) currentIndex = 0;
 
+// With more pages than fit the header width, the topnav list scrolls
+// horizontally. Center the active page so it isn't hidden off-screen.
+function centerActiveNavLink(nav) {
+  var activeLink = nav.querySelector('a[aria-current="page"]');
+  if (!activeLink) return;
+  var navRect = nav.getBoundingClientRect();
+  var linkRect = activeLink.getBoundingClientRect();
+  var offset = (linkRect.left - navRect.left) - (nav.clientWidth - linkRect.width) / 2;
+  var maxScroll = nav.scrollWidth - nav.clientWidth;
+  nav.scrollLeft = Math.max(0, Math.min(nav.scrollLeft + offset, maxScroll));
+}
+
 document.querySelectorAll(".topnav").forEach(function (nav) {
   nav.innerHTML = pages.map(function (page, index) {
     var current = index === currentIndex ? ' aria-current="page"' : "";
     return '<a href="' + page.file + '"' + current + '><span class="nav-num">' +
       String(index + 1).padStart(2, "0") + "</span> " + page.label + "</a>";
   }).join("");
+
+  centerActiveNavLink(nav);
+});
+
+// Layout can still settle after stylesheets/images finish loading, so
+// re-center once everything is done, and again if the viewport is resized.
+window.addEventListener("load", function () {
+  document.querySelectorAll(".topnav").forEach(centerActiveNavLink);
+});
+var resizeTimer;
+window.addEventListener("resize", function () {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function () {
+    document.querySelectorAll(".topnav").forEach(centerActiveNavLink);
+  }, 150);
 });
 
 // Keep this reading route outside the numbered, horizontally scrolling guide.
