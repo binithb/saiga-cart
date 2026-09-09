@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explore the AI Agile Manifesto and saiga-cart: a practical guide and workspace toolkit for shared understanding and AI-assisted software delivery.">
-  <title>Scaling AI in Real Software · AI Agile Manifesto &amp; saiga-cart</title>
+  <meta name="description" content="A nine-page guide to shared context, bounded AI delegation, and evidence-led software delivery with saiga-cart.">
+  <title>Start · Scaling AI in Real Software</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,155 +22,63 @@
         <a href="index.html" aria-current="page"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
-      </nav>
-      <nav class="utility-nav" aria-label="Manifesto">
-        <a href="ai-agile-manifesto.html">Manifesto</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
-      <div class="page-meta">
-        <span class="kicker active">Start · 1 / 11</span>
-      </div>
+      <div class="page-meta"><span class="kicker active">Start · 1 / 9</span></div>
       <h1>Scaling AI in Real Software</h1>
-      <p class="lede">Faster implementation can carry misunderstood customer needs further. The AI Agile Manifesto starts with shared understanding; saiga-cart is a practical workspace toolkit for carrying that understanding into durable engineering context and software delivery.</p>
+      <p class="lede">Fast code generation needs shared intent, durable context, and evidence. saiga-cart puts that context and delivery planning beside the code, across repositories.</p>
+      <p>The <a href="ai-agile-manifesto.html">AI Agile Manifesto</a> starts with customer understanding and useful outcomes, not prompting speed.</p>
       <div class="site-actions">
-        <a class="action-primary" href="ai-agile-manifesto.html">Read the AI Agile Manifesto</a>
-        <a class="action-secondary" href="01-problem.html">Explore the practical guide</a>
+        <a class="action-primary" href="01-problem.html">Explore the guide</a>
         <a href="https://github.com/binithb/saiga-cart#-quickstart-bootstrapping-a-new-workspace">Get started on GitHub</a>
       </div>
-      
       <div class="hero-banner-container">
         <img src="assets/saiga-cart-banner.svg" alt="saiga-cart: A cart pulled by 3 rows of saigas across a multi-repository workspace" class="hero-banner-img" width="1200" height="460">
       </div>
-
-      <section class="callout info manifesto-feature" aria-labelledby="manifesto-title">
-        <span class="section-label">Our starting point</span>
-        <h2 id="manifesto-title">AI Agile Manifesto</h2>
-        <p>AI can help us build faster. Customer discovery and feedback help us find out whether we are building the right thing.</p>
-        <ul class="manifesto-values">
-          <li><strong>Shared understanding over individual prompting speed</strong></li>
-          <li><strong>Useful outcomes over implementation speed</strong></li>
-          <li><strong>Customer discovery over detailed instructions</strong></li>
-          <li><strong>Learning and adaptation over uninterrupted execution</strong></li>
-        </ul>
-        <p><a href="ai-agile-manifesto.html">Read the full manifesto: four values and twelve principles</a></p>
-      </section>
     </header>
 
-    <section aria-labelledby="core-pillars">
-      <span class="section-label">The Core Capabilities</span>
-      <h2 id="core-pillars">Two Capabilities Every AI Project Needs</h2>
-      <p>saiga-cart supports the practice with shared context and delivery planning beside the code.</p>
-      <div class="grid">
-        <article class="card span-6">
-          <span class="card-number">01</span>
-          <h3>Cross-Repo AI Context</h3>
-          <p>Unified multi-root workspace where AI agents reason about contracts, shared schemas, and dependencies across sibling repositories in a single session.</p>
-          <ul>
-            <li>Eliminates window switching and prompt re-pasting</li>
-            <li>Enforces cross-cutting architectural constraints</li>
-          </ul>
-        </article>
-
-        <article class="card span-6">
-          <span class="card-number">02</span>
-          <h3>Durable Delivery Planning</h3>
-          <p>Versioned markdown hierarchy (PIs, Sprints, Cycles, or Kanban) living directly beside the code with explicit Definition of Ready (DoR) gates.</p>
-          <ul>
-            <li>Prevents settled decisions from being forgotten</li>
-            <li>Maintains 1:1 bidirectional links with issue trackers</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
     <section aria-labelledby="roadmap-title">
-      <span class="section-label">Guide Structure</span>
-      <h2 id="roadmap-title">Eleven Short, Scannable Stops</h2>
-      <div class="sequence">
-        <div class="sequence-step">
-          <span class="sequence-num">01</span>
-          <strong>Start</strong>
-          <span>Why method matters</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">02</span>
-          <strong>Drift</strong>
-          <span>The 3 failure modes</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">03</span>
-          <strong>Context Tax</strong>
-          <span>The hidden cost</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">04</span>
-          <strong>Bottleneck</strong>
-          <span>Why oversight moves upstream</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">05</span>
-          <strong>Balance</strong>
-          <span>Agile, rebalanced</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">06</span>
-          <strong>Modes</strong>
-          <span>Helper vs. Partner</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">07</span>
-          <strong>4 Files</strong>
-          <span>What to write down</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">08</span>
-          <strong>Co-location</strong>
-          <span>Why git repository</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">09</span>
-          <strong>Roles</strong>
-          <span>Human vs. AI</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">10</span>
-          <strong>Lifecycle</strong>
-          <span>From aim to merge</span>
-        </div>
-        <div class="sequence-step">
-          <span class="sequence-num">11</span>
-          <strong>Payoff</strong>
-          <span>ROI &amp; rollout</span>
-        </div>
+      <span class="section-label">Nine pages, three phases</span>
+      <h2 id="roadmap-title">From Friction to a Working Practice</h2>
+      <div class="grid">
+        <article class="card span-4">
+          <span class="card-number">01 · Understand</span>
+          <h3>Find the Friction</h3>
+          <p>Recognize drift and the context tax, then see why fast generation moves oversight upstream.</p>
+        </article>
+        <article class="card span-4">
+          <span class="card-number">02 · Equip</span>
+          <h3>Make Context Durable</h3>
+          <p>Match the operating mode to the task. Keep reality, intent, reasons, and evidence in git beside the implementation.</p>
+        </article>
+        <article class="card span-4">
+          <span class="card-number">03 · Practice</span>
+          <h3>Delegate and Learn</h3>
+          <p>Give humans and agents clear responsibilities, then pilot the workflow and measure whether it helps.</p>
+        </article>
       </div>
     </section>
 
     <nav class="page-nav" aria-label="Page navigation">
-      <span></span>
       <a class="next" href="01-problem.html">
-        <div>
-          <span class="page-nav-meta">Next · Page 2</span>
-          <span>The Problem — Three Kinds of Drift</span>
-        </div>
+        <div><span class="page-nav-meta">Next · Page 2</span><span>Three Kinds of Drift</span></div>
         <span aria-hidden="true">→</span>
       </a>
     </nav>
   </main>
-
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 1 of 11</span>
+    <span>saiga-cart Guide · Page 1 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>

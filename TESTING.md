@@ -25,6 +25,23 @@ If Windows does not provide `python`, use `py -3 -m unittest discover -v`.
 The planning-audit and story-readiness scripts keep their focused unit tests
 beside their respective skill implementations.
 
+## Presentation Guide
+
+Run `python -m unittest tests.test_presentation -v` for dependency-free checks of:
+
+- The nine-page order (including Start) in static HTML and `assets/nav.js`.
+- Page counts, active links, previous/next destinations, and heading labels without JavaScript.
+- Static secondary Manifesto links, its unnumbered return route, and compatibility landing pages.
+- Local links, fragments, asset references, and the merged editorial requirements.
+
+These tests also run in the existing unittest discovery command in CI.
+For layout changes, additionally render all nine guide pages with JavaScript on
+and off at 1486, 1280, 768, 390, and 320 CSS pixels wide. Check wrapping header
+links, no horizontal page overflow, the Manifesto link beside the heading on
+wide desktops and above it on smaller screens, skip links, and arrow-key
+navigation. Repeat with larger text or browser zoom. Browser checks require a
+local browser/harness; no browser dependency is added to the Python suite.
+
 ## Minimal System Smoke Tests
 
 `tests/test_bootstrap_matrix.py` copies the template into a temporary

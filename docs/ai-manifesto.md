@@ -70,7 +70,7 @@ This is saiga-cart's perspective, building on the
 revision.
 
 It draws on the repository's guidance on
-[AI and Agile](presentation/04-agile-inversion.html),
+[The Shift: AI and Agile](presentation/03-bottleneck.html),
 [durable context](presentation/06-four-artifacts.html), and
 [human responsibility and bounded AI autonomy](presentation/08-roles.html).
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="The four essential categories of plain-text committed files that ground AI agents: reality, intent, reasons, and evidence.">
-  <title>The Practice · Four Committed Files</title>
+  <meta name="description" content="Four categories of durable context that ground AI agents: reality, intent, reasons, and evidence, with useful repository paths.">
+  <title>Four Artifacts · Reality, Intent, Reasons, Evidence</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,25 +22,24 @@
         <a href="index.html"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html" aria-current="page"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html" aria-current="page"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
       <div class="page-meta">
-        <span class="kicker active">The Practice · 7 / 11</span>
+        <span class="kicker active">Four Artifacts · 6 / 9</span>
       </div>
-      <h1>Four Committed Files</h1>
-      <p class="lede">To eliminate drift, replace chat memory with four small, plain-text categories committed directly in git beside the code. Together they form the lightweight oversight contract every session can apply.</p>
+      <h1>Four Artifacts</h1>
+      <p class="lede">Reduce drift with four categories of durable context in git, not four literal files. Intent is a planning directory; decisions and evidence may span several files.</p>
       
       <div class="takeaway-box">
         <div class="takeaway-icon">📁</div>
@@ -58,28 +57,28 @@
           <span class="card-number">01 · Reality</span>
           <h3>What Is True Now</h3>
           <p>Current architecture, directory contracts, and repository ownership. Updated in the same PR that changes system structure.</p>
-          <p><strong>Canonical file:</strong> <code>docs/architecture.md</code></p>
+          <p><strong>Path:</strong> <code>docs/architecture.md</code></p>
         </article>
 
         <article class="card span-6">
           <span class="card-number">02 · Intent</span>
           <h3>What We Are Building Next</h3>
           <p>The active delivery increment (PI, sprint, cycle, or milestone) with explicit acceptance criteria, story sizing, and DoR status.</p>
-          <p><strong>Canonical file:</strong> <code>docs/planning/01/</code></p>
+          <p><strong>Path:</strong> <code>docs/planning/</code> (active increment, stories, and progress)</p>
         </article>
 
         <article class="card span-6">
           <span class="card-number">03 · Reasons</span>
           <h3>Why We Chose It</h3>
           <p>Append-only Architectural Decision Records (ADRs). Superseded rather than edited, preventing resolved debates from reopening.</p>
-          <p><strong>Canonical file:</strong> <code>docs/adr/0001-*.md</code></p>
+          <p><strong>Path:</strong> <code>docs/adr/0001-*.md</code></p>
         </article>
 
         <article class="card span-6">
           <span class="card-number">04 · Evidence</span>
           <h3>What Counts as Done</h3>
-          <p>Executable verification commands and pass/fail criteria. "The agent says it works" is not verification — only test commands prove it.</p>
-          <p><strong>Canonical file:</strong> <code>docs/workflow.md</code> (DoD)</p>
+          <p>Verification commands, pass/fail criteria, and recorded results. Tests show specified behavior; human review judges the change and its limits.</p>
+          <p><strong>Paths:</strong> <code>docs/workflow.md</code> (DoD), tests, and PR evidence</p>
         </article>
       </div>
     </section>
@@ -87,7 +86,7 @@
     <section aria-labelledby="hygiene-heading">
       <div class="callout success">
         <h3 id="hygiene-heading">Documentation Hygiene Rule</h3>
-        <p>Keep files concise and single-purpose. Stale documentation actively degrades AI reasoning by injecting hallucinations. If a statement stops being true, update or delete it in the same PR.</p>
+        <p>Keep context concise and current. Stale guidance can misdirect the next session. If a statement stops being true, update or remove it in the same PR; preserve decision history through superseding ADRs.</p>
       </div>
     </section>
 
@@ -95,14 +94,14 @@
       <a class="prev" href="05-modes.html">
         <span aria-hidden="true">←</span>
         <div>
-          <span class="page-nav-meta">Previous · Page 6</span>
-          <span>The Choice — Two Operating Modes</span>
+          <span class="page-nav-meta">Previous · Page 5</span>
+          <span>Two Operating Modes</span>
         </div>
       </a>
       <a class="next" href="07-colocation.html">
         <div>
-          <span class="page-nav-meta">Next · Page 8</span>
-          <span>Architecture — Co-location &amp; Hierarchy</span>
+          <span class="page-nav-meta">Next · Page 7</span>
+          <span>Co-location &amp; The Planning Ladder</span>
         </div>
         <span aria-hidden="true">→</span>
       </a>
@@ -110,7 +109,7 @@
   </main>
 
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 7 of 11</span>
+    <span>saiga-cart Guide · Page 6 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>

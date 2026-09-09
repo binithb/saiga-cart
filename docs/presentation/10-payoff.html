@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Quantifiable benefits of committed context and a 4-phase pragmatic adoption roadmap.">
-  <title>The Payoff · ROI &amp; 4-Phase Adoption</title>
+  <meta name="description" content="Adopt durable context in four steps, then measure a small pilot rather than assume an ROI.">
+  <title>Adopt · Adopt in Four Steps</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,107 +22,78 @@
         <a href="index.html"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html" aria-current="page"><span class="nav-num">11</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html" aria-current="page"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
-      <div class="page-meta">
-        <span class="kicker active">The Payoff · 11 / 11</span>
-      </div>
-      <h1>ROI &amp; 4-Phase Adoption</h1>
-      <p class="lede">Committed in-repo context reduces ambiguity before implementation, refunds the daily context tax, cuts rework, and unlocks safe delegation across repositories.</p>
-      
-      <div class="takeaway-box">
-        <div class="takeaway-icon">📈</div>
-        <div class="takeaway-content">
-          <strong>The net return:</strong> Not just faster typing, but less ambiguity before implementation, eliminated re-explanation, durable context between sessions, and confident cross-repo execution.
-        </div>
-      </div>
+      <div class="page-meta"><span class="kicker active">Adopt · 9 / 9</span></div>
+      <h1>Adopt in Four Steps</h1>
+      <p class="lede">Start with one bounded delivery slice. Keep only the context that helps the next person or agent act correctly, then measure whether the practice earns its upkeep.</p>
     </header>
 
-    <section aria-labelledby="metrics-heading">
-      <span class="section-label">Estimated Impact</span>
-      <h2 id="metrics-heading">What Committed Context Delivers</h2>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <span class="metric-value">15–45m</span>
-          <p class="metric-label">Context tax refunded per substantial AI session.</p>
-        </div>
-        <div class="metric-card">
-          <span class="metric-value">100–150h</span>
-          <p class="metric-label">Annual hours saved per 5-person engineering team.</p>
-        </div>
-        <div class="metric-card">
-          <span class="metric-value">2–6 mo</span>
-          <p class="metric-label">Typical break-even timeframe for multi-repo teams.</p>
-        </div>
-        <div class="metric-card">
-          <span class="metric-value">~2×</span>
-          <p class="metric-label">Speedup on bounded, cross-repository tasks.</p>
-        </div>
+    <section aria-labelledby="adoption-heading">
+      <span class="section-label">Start small</span>
+      <h2 id="adoption-heading">Build the Habit, Not a Bigger Wiki</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <span class="card-number">01</span>
+          <h3>Capture the System FAQ</h3>
+          <p>Put recurring instructions and safety boundaries in <code>AGENTS.md</code>. Link to authoritative details rather than copying them.</p>
+        </article>
+        <article class="card span-6">
+          <span class="card-number">02</span>
+          <h3>Map the Architecture</h3>
+          <p>Summarize repository ownership and contracts in <code>docs/architecture.md</code>. Record consequential choices in <code>docs/adr/</code>.</p>
+        </article>
+        <article class="card span-6">
+          <span class="card-number">03</span>
+          <h3>Version the Active Plan</h3>
+          <p>Put a Ready story in <code>docs/planning/</code>, link its tracker issue, and define verification in <code>docs/workflow.md</code>. Review plan and code in the same PR.</p>
+        </article>
+        <article class="card span-6">
+          <span class="card-number">04</span>
+          <h3>Pilot, Measure, Prune</h3>
+          <p>Run the Roles &amp; Flow loop. Remove stale guidance and keep what reduces confusion without adding more maintenance than it saves.</p>
+        </article>
       </div>
     </section>
 
-    <section aria-labelledby="adoption-heading">
-      <span class="section-label">Rollout Strategy</span>
-      <h2 id="adoption-heading">Four Steps to Adopt Without Overhead</h2>
-      <div class="grid">
-        <article class="card span-6">
-          <span class="card-number">Phase 1</span>
-          <h3>Capture System FAQ</h3>
-          <p>Write down the 3–5 things you repeatedly explain to new developers or AI sessions in a single <code>AGENTS.md</code>.</p>
-        </article>
+    <section class="callout info" aria-labelledby="metrics-heading">
+      <h2 id="metrics-heading">Pilot Goals, Not ROI Promises</h2>
+      <p>No measured ROI is established here. Before the pilot, agree targets and record a baseline on comparable tasks. Compare context setup minutes, review and repair time, and reopened decisions; include time spent maintaining docs. Aim to reduce that total without increasing escaped defects or missing customer outcomes.</p>
+    </section>
 
-        <article class="card span-6">
-          <span class="card-number">Phase 2</span>
-          <h3>Define System Architecture</h3>
-          <p>Commit a 1-page <code>docs/architecture.md</code> summarizing repo boundaries, contracts, and technology stack.</p>
-        </article>
-
-        <article class="card span-6">
-          <span class="card-number">Phase 3</span>
-          <h3>Move Active Plan to Git</h3>
-          <p>Version the current sprint/increment in <code>docs/planning/</code>. Update plans in the same PRs that change code.</p>
-        </article>
-
-        <article class="card span-6">
-          <span class="card-number">Phase 4</span>
-          <h3>Prune Relentlessly</h3>
-          <p>Treat docs like code: delete stale files immediately. Concise, accurate context beats voluminous prose every time.</p>
-        </article>
+    <section aria-labelledby="start-heading">
+      <h2 id="start-heading">Try It in Your Workspace</h2>
+      <p>The bootstrapper creates the workspace structure and planning templates; your team supplies the real system context.</p>
+      <div class="site-actions">
+        <a class="action-primary" href="https://github.com/binithb/saiga-cart#-quickstart-bootstrapping-a-new-workspace">Follow the quickstart</a>
+        <a href="https://github.com/binithb/saiga-cart">Browse the repository</a>
       </div>
     </section>
 
     <nav class="page-nav" aria-label="Page navigation">
-      <a class="prev" href="09-lifecycle.html">
+      <a class="prev" href="08-roles.html">
         <span aria-hidden="true">←</span>
-        <div>
-          <span class="page-nav-meta">Previous · Page 10</span>
-          <span>Delivery Flow — From Aim to Merge</span>
-        </div>
+        <div><span class="page-nav-meta">Previous · Page 8</span><span>Roles &amp; Flow</span></div>
       </a>
       <a class="next" href="index.html">
-        <div>
-          <span class="page-nav-meta">Return to Start</span>
-          <span>Scaling AI in Real Software</span>
-        </div>
+        <div><span class="page-nav-meta">Return to Start · Page 1</span><span>Scaling AI in Real Software</span></div>
         <span aria-hidden="true">↺</span>
       </a>
     </nav>
   </main>
-
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 11 of 11</span>
+    <span>saiga-cart Guide · Page 9 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>

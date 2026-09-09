@@ -85,8 +85,8 @@ button:focus-visible {
 
 /* Header & Top Navigation */
 .site-header {
-  position: sticky;
-  top: 0;
+  /* A wrapped header stays in flow rather than covering the reading area. */
+  position: relative;
   z-index: 40;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -95,15 +95,15 @@ button:focus-visible {
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  /* Wider than the reading measure: this is chrome/navigation, not body
-     copy, and the extra room lets more of the (now 11-page) topnav fit
-     before it needs to scroll. */
+  /* Navigation has more room than body copy, and wraps without hiding links. */
   width: min(1360px, calc(100% - 32px));
   min-height: 56px;
   margin: 0 auto;
+  padding: 8px 0;
 }
 
 .brand {
@@ -154,21 +154,12 @@ button:focus-visible {
 
 .topnav {
   display: flex;
-  flex: 1;
+  flex: 1 1 58rem;
+  flex-wrap: wrap;
   min-width: 0;
   align-items: center;
   gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
   padding: 4px 0;
-  /* Fade the edges so it's visually clear the list scrolls when it overflows. */
-  mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
-}
-
-.topnav::-webkit-scrollbar {
-  display: none;
 }
 
 .topnav a {
@@ -206,6 +197,51 @@ main {
   width: min(var(--measure), calc(100% - 32px));
   margin: 0 auto;
   padding: 40px 0 32px;
+  overflow-wrap: anywhere;
+}
+
+/* Static secondary discovery link: beside the heading only when space permits. */
+.guide-resource {
+  margin: 0 0 20px;
+  font-size: 0.94rem;
+}
+
+.guide-resource a {
+  display: inline-block;
+  padding: 6px 0;
+}
+
+@media (min-width: 1200px) {
+  main.guide {
+    width: min(1360px, calc(100% - 32px));
+    display: grid;
+    grid-template-columns: minmax(0, 1040px) minmax(10rem, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+
+  .guide > * {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .guide > .page-head {
+    grid-row: 1;
+  }
+
+  .guide > .guide-resource {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Grid item margins do not collapse like the original block flow. */
+  .guide > section {
+    margin-top: 0;
+  }
+
+  .guide > .page-nav {
+    margin-top: 8px;
+  }
 }
 
 /* Page Header & Kickers */
@@ -589,6 +625,7 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 16px 20px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -635,9 +672,13 @@ tr:last-child td {
 }
 
 .keyboard-hint {
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 6px;
+}
+
+html[data-keyboard-nav="ready"] .keyboard-hint {
+  display: inline-flex;
 }
 
 kbd {
@@ -651,24 +692,7 @@ kbd {
   box-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
-/* Manifesto discovery and reading */
-.utility-nav {
-  flex-shrink: 0;
-}
-
-.utility-nav a {
-  display: inline-block;
-  padding: 6px 8px;
-  border-radius: var(--radius);
-  color: var(--primary-dark);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.utility-nav a[aria-current="page"] {
-  background: var(--primary-light);
-}
-
+/* Manifesto reading */
 .site-actions,
 .manifesto-toc {
   display: flex;
@@ -708,12 +732,6 @@ kbd {
   padding: 6px 0 6px 14px;
   border-left: 3px solid var(--primary);
   margin: 10px 0;
-}
-
-.manifesto-feature .manifesto-values {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 24px;
 }
 
 .manifesto-prose {
@@ -766,26 +784,12 @@ kbd {
 
 @media (max-width: 640px) {
   .topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 12px;
     padding: 10px 0;
   }
   
   .topnav {
-    grid-column: 1 / -1;
-    grid-row: 2;
     width: 100%;
-    overflow-x: scroll;
-  }
-
-  .utility-nav {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .manifesto-feature .manifesto-values {
-    grid-template-columns: 1fr;
   }
 
   #content,

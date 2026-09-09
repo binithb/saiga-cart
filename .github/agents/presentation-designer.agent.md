@@ -11,7 +11,8 @@ You are the dedicated **UI/UX & Presentation Designer** agent for `saiga-cart`.
 ## Responsibilities
 
 1. **GitHub Pages Presentation Deck (`docs/presentation/`)**:
-   - Maintain the multi-page card-based presentation site (`index.html` and `01-` through `08-` slides).
+   - Maintain the nine-page card-based guide: Start, Drift, Context Tax, The Shift, Modes, Four Artifacts, Co-location, Roles & Flow, Adopt. Canonical order lives in `assets/nav.js` and each static topnav; filename prefixes remain stable and need not match page numbers.
+   - Keep the AI Agile Manifesto unnumbered and preserve compatibility landing pages for merged guide URLs.
    - Ensure clean, modern, responsive typography and layout via `docs/presentation/assets/style.css`.
    - Maintain lightweight client-side navigation and keyboard shortcuts via `docs/presentation/assets/nav.js`.
 

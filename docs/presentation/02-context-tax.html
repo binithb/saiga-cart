@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Understanding the context tax: the hidden time lost to re-explaining architecture and repairing plausible-but-wrong code.">
-  <title>The Cost · The Daily Context Tax</title>
+  <title>Context Tax · The Daily Context Tax</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,22 +22,21 @@
         <a href="index.html"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html" aria-current="page"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
       <div class="page-meta">
-        <span class="kicker active">The Cost · 3 / 11</span>
+        <span class="kicker active">Context Tax · 3 / 9</span>
       </div>
       <h1>The Daily Context Tax</h1>
       <p class="lede">When developers use AI without durable in-repo context, they pay a recurring "context tax" on every substantial task. What feels fast in chat becomes slow across the full lifecycle.</p>
@@ -45,7 +44,7 @@
       <div class="takeaway-box">
         <div class="takeaway-icon">💸</div>
         <div class="takeaway-content">
-          <strong>The mismatch:</strong> Giving feature-level tasks to a context-blind model creates plausible-but-wrong code that consumes more time to review, debug, and repair than writing it by hand.
+          <strong>The mismatch:</strong> Fast-looking output can hide review, debugging, and repair work. Count the full delivery effort, not just generation time.
         </div>
       </div>
     </header>
@@ -56,8 +55,8 @@
       <div class="grid">
         <article class="card span-4">
           <span class="card-number">01</span>
-          <h3>15–45 Min Re-explanation</h3>
-          <p>Every fresh AI session must be taught the system: conventions, repo boundaries, deprecated functions, and test setup. This time is lost on every ticket.</p>
+          <h3>Repeated Re-explanation</h3>
+          <p>Re-pasting conventions, repository boundaries, deprecated functions, and test setup takes time before implementation even begins.</p>
         </article>
 
         <article class="card span-4">
@@ -74,20 +73,9 @@
       </div>
     </section>
 
-    <section aria-labelledby="amplifiers">
-      <span class="section-label">Multiplier Factors</span>
+    <section class="callout info" aria-labelledby="amplifiers">
       <h2 id="amplifiers">What Amplifies the Context Tax?</h2>
-      <div class="grid">
-        <article class="card span-6">
-          <h3>Multi-Repository Work</h3>
-          <p>Changes spanning frontends, backends, and shared libraries suffer exponentially when agents can only inspect one repository at a time.</p>
-        </article>
-
-        <article class="card span-6">
-          <h3>Multi-Developer Teams</h3>
-          <p>As team size grows, unaligned AI prompts quickly fragment codebase style, tooling choices, and testing patterns.</p>
-        </article>
-      </div>
+      <p><strong>More repositories</strong> mean more contracts to reconcile; <strong>more developers</strong> mean more separate sessions making assumptions. Both increase the value of shared, current context.</p>
     </section>
 
     <nav class="page-nav" aria-label="Page navigation">
@@ -95,7 +83,7 @@
         <span aria-hidden="true">←</span>
         <div>
           <span class="page-nav-meta">Previous · Page 2</span>
-          <span>The Problem — Three Kinds of Drift</span>
+          <span>Three Kinds of Drift</span>
         </div>
       </a>
       <a class="next" href="03-bottleneck.html">
@@ -109,7 +97,7 @@
   </main>
 
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 3 of 11</span>
+    <span>saiga-cart Guide · Page 3 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>

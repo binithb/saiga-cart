@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Why planning files belong in git alongside code, and how the hierarchical planning ladder connects high-level intent to today's prompt.">
-  <title>Architecture · Co-location &amp; The Planning Ladder</title>
+  <title>Co-location · The Planning Ladder</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,22 +22,21 @@
         <a href="index.html"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html" aria-current="page"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html" aria-current="page"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
       <div class="page-meta">
-        <span class="kicker active">Architecture · 8 / 11</span>
+        <span class="kicker active">Co-location · 7 / 9</span>
       </div>
       <h1>Co-location &amp; The Planning Ladder</h1>
       <p class="lede">Keeping planning artifacts in git beside the code gives agents the same contract humans use, without custom API plugins. A clean planning ladder connects multi-month goals to today's code diff.</p>
@@ -56,20 +55,20 @@
       <div class="grid">
         <article class="card span-4">
           <span class="card-number">01</span>
-          <h3>Zero Integration Cost</h3>
-          <p>Any AI agent with the repository open can read plans, ADRs, and architectures immediately — no API tokens, browser extensions, or copy-pasting required.</p>
+          <h3>Read Context Directly</h3>
+          <p>Agents with repository access can read technical plans without a separate tracker integration.</p>
         </article>
 
         <article class="card span-4">
           <span class="card-number">02</span>
-          <h3>Impossible to Diverge</h3>
-          <p>Plan adjustments ride on the exact same branch and pull request as the code changes. Plan and code stay 100% synchronized in git history.</p>
+          <h3>Review plan and code together</h3>
+          <p>Put plan adjustments in the implementation PR. Shared history makes drift easier to spot, not impossible.</p>
         </article>
 
         <article class="card span-4">
           <span class="card-number">03</span>
           <h3>Survives Tool Churn</h3>
-          <p>Plain markdown files outlive AI vendor switches, tracker migrations, and IDE upgrades. Your intellectual property stays permanently in your repo.</p>
+          <p>Plain Markdown stays readable across agent, tracker, and IDE changes.</p>
         </article>
       </div>
     </section>
@@ -105,14 +104,14 @@
       <a class="prev" href="06-four-artifacts.html">
         <span aria-hidden="true">←</span>
         <div>
-          <span class="page-nav-meta">Previous · Page 7</span>
-          <span>The Practice — Four Committed Files</span>
+          <span class="page-nav-meta">Previous · Page 6</span>
+          <span>Four Artifacts</span>
         </div>
       </a>
       <a class="next" href="08-roles.html">
         <div>
-          <span class="page-nav-meta">Next · Page 9</span>
-          <span>Governance — Human Navigator, AI Driver</span>
+          <span class="page-nav-meta">Next · Page 8</span>
+          <span>Roles &amp; Flow</span>
         </div>
         <span aria-hidden="true">→</span>
       </a>
@@ -120,7 +119,7 @@
   </main>
 
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 8 of 11</span>
+    <span>saiga-cart Guide · Page 7 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Governance and division of labor between human engineer and AI agent: who steers, who drafts, and who owns irreversibility.">
-  <title>Governance · Human Navigator, AI Driver</title>
+  <meta name="description" content="Human navigator, AI driver: an owner-labelled flow from Aim to Merge with Ready criteria, automated checks, and human review.">
+  <title>Roles &amp; Flow · From Aim to Merge</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -22,89 +22,75 @@
         <a href="index.html"><span class="nav-num">01</span> Start</a>
         <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
         <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
-        <a href="03-bottleneck.html"><span class="nav-num">04</span> Bottleneck</a>
-        <a href="04-agile-inversion.html"><span class="nav-num">05</span> Balance</a>
-        <a href="05-modes.html"><span class="nav-num">06</span> Modes</a>
-        <a href="06-four-artifacts.html"><span class="nav-num">07</span> 4 Files</a>
-        <a href="07-colocation.html"><span class="nav-num">08</span> Co-location</a>
-        <a href="08-roles.html" aria-current="page"><span class="nav-num">09</span> Roles</a>
-        <a href="09-lifecycle.html"><span class="nav-num">10</span> Lifecycle</a>
-        <a href="10-payoff.html"><span class="nav-num">11</span> Payoff</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html" aria-current="page"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
       </nav>
     </div>
   </header>
 
-  <main id="content">
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
     <header class="page-head">
-      <div class="page-meta">
-        <span class="kicker active">Governance · 9 / 11</span>
-      </div>
-      <h1>Human Navigator, AI Driver</h1>
-      <p class="lede">Clear division of responsibility prevents both micro-management fatigue and runaway unreviewed code generation.</p>
-      
-      <div class="takeaway-box">
-        <div class="takeaway-icon">🧭</div>
-        <div class="takeaway-content">
-          <strong>The irreversibility principle:</strong> Humans define and approve the contract at points of irreversibility (architecture choices, merge approvals, deployments). AI implements within it and produces evidence through drafting, refactoring, and test execution.
-        </div>
-      </div>
+      <div class="page-meta"><span class="kicker active">Roles &amp; Flow · 8 / 9</span></div>
+      <h1>Roles &amp; Flow</h1>
+      <p class="lede">The human navigates: approves boundaries and reviews evidence before merge. The AI drives: drafts within those boundaries and runs checks. Add human checkpoints as risk and cost of reversal demand.</p>
     </header>
 
-    <section aria-labelledby="roles-comparison">
-      <span class="section-label">Division of Labor</span>
-      <h2 id="roles-comparison">Two Complementary Roles</h2>
+    <section aria-labelledby="flow-heading">
+      <span class="section-label">Aim → Map → Draft → Prove → Audit → Merge</span>
+      <h2 id="flow-heading">From Aim to Merge</h2>
       <div class="grid">
-        <article class="card span-6">
-          <span class="card-number">Human Engineer</span>
-          <h3>The Navigator</h3>
-          <ul>
-            <li><strong>Sets Direction:</strong> Defines the problem, scope limits, and business goals.</li>
-            <li><strong>Records Constraints:</strong> Writes ADRs and key architectural decisions.</li>
-            <li><strong>Reviews Evidence:</strong> Evaluates diffs, test logs, and security implications.</li>
-            <li><strong>Approves Merges:</strong> Retains final authority over git main and releases.</li>
-          </ul>
+        <article class="card span-4">
+          <span class="card-number">01 · Aim · Human</span>
+          <h3>Approve the Boundaries</h3>
+          <p>Choose the outcome, scope, safety constraints, and proof obligations.</p>
+          <p><strong>Ready:</strong> unblocked, sized &le; Medium, affected repos listed, acceptance criteria written; <code>Definition of Ready | Done</code>.</p>
         </article>
-
-        <article class="card span-6">
-          <span class="card-number">AI Agent</span>
-          <h3>The Driver</h3>
-          <ul>
-            <li><strong>Drafts Implementations:</strong> Generates code, tests, and documentation rapidly.</li>
-            <li><strong>Executes &amp; Self-Corrects:</strong> Runs compilers, linters, and tests; fixes its own errors.</li>
-            <li><strong>Explores Options:</strong> Proposes candidate implementations within stated constraints.</li>
-            <li><strong>Operates Reversibly:</strong> Works entirely in feature branches and draft PRs.</li>
-          </ul>
+        <article class="card span-4">
+          <span class="card-number">02 · Map · AI</span>
+          <h3>Read Before Writing</h3>
+          <p>Read repository instructions (<code>AGENTS.md</code>), <code>docs/architecture.md</code>, affected sibling repositories, and relevant ADRs. Surface conflicts or missing decisions for the human.</p>
         </article>
-      </div>
-    </section>
-
-    <section aria-labelledby="speed-dial">
-      <div class="callout info">
-        <h3 id="speed-dial">The Autonomy Speed Dial</h3>
-        <p>Calibrate autonomy by cost of reversal: for cheap-to-undo work (scratch branches, unit test additions), let the AI run autonomously. For expensive-to-undo work (database migrations, public APIs, auth flows), gate with explicit human consensus checks.</p>
+        <article class="card span-4">
+          <span class="card-number">03 · Draft · AI</span>
+          <h3>Keep Changes Reversible</h3>
+          <p>Work on feature branches and draft PRs. Change only the agreed scope; update plans and architecture notes when boundaries change. Ask before exceeding the approved contract.</p>
+        </article>
+        <article class="card span-4">
+          <span class="card-number">04 · Prove · AI</span>
+          <h3>Run Automated Checks</h3>
+          <p>Run the required tests and linters, fix failures, and record results against acceptance criteria. Passing checks are evidence, not human approval.</p>
+        </article>
+        <article class="card span-4">
+          <span class="card-number">05 · Audit · Human</span>
+          <h3>Judge the Evidence</h3>
+          <p>Review contract conformance, the diff, and test evidence. Confirm passing checks, required architecture updates, and an approved PR summary before authorizing merge.</p>
+        </article>
+        <article class="card span-4">
+          <span class="card-number">06 · Merge · Human-led</span>
+          <h3>Land and Close the Loop</h3>
+          <p>Merge only with human authorization. Then the delivery owner, assisted by AI, marks the local story Done and updates the linked tracker. Release approval remains a human responsibility.</p>
+        </article>
       </div>
     </section>
 
     <nav class="page-nav" aria-label="Page navigation">
       <a class="prev" href="07-colocation.html">
         <span aria-hidden="true">←</span>
-        <div>
-          <span class="page-nav-meta">Previous · Page 8</span>
-          <span>Architecture — Co-location &amp; Hierarchy</span>
-        </div>
+        <div><span class="page-nav-meta">Previous · Page 7</span><span>Co-location &amp; The Planning Ladder</span></div>
       </a>
-      <a class="next" href="09-lifecycle.html">
-        <div>
-          <span class="page-nav-meta">Next · Page 10</span>
-          <span>Delivery Flow — From Aim to Merge</span>
-        </div>
+      <a class="next" href="10-payoff.html">
+        <div><span class="page-nav-meta">Next · Page 9</span><span>Adopt in Four Steps</span></div>
         <span aria-hidden="true">→</span>
       </a>
     </nav>
   </main>
-
   <footer class="site-footer">
-    <span>saiga-cart Guide · Page 9 of 11</span>
+    <span>saiga-cart Guide · Page 8 of 9</span>
     <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
   </footer>
 </body>
