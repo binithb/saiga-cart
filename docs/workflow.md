@@ -25,6 +25,22 @@ How we work across repositories in this workspace.
 | **Dependencies** | Cross-team blockers only | Markdown links to prerequisite local stories & ADRs |
 | **Architecture / ADRs** | High-level summary | Direct relative links to `docs/adr/` and architecture notes |
 
+### Local Authentication & API Tokens (Skills & Autonomous Agents)
+
+Skills (e.g. `jira-status-sync`, `gitlab-issue-onboard`, `ado-work-item-onboard`, `pr-create`) require API tokens to read and write remote resources. Never commit credentials to git.
+
+1. **Local Credentials File**: Copy the template `.env.example` to `.env.local` in the workspace root (`.env.local` is git-ignored).
+2. **Platform Permissions & Scopes**:
+
+| Platform | Variable | Scope / Permissions | Token Creation URL |
+|---|---|---|---|
+| **Jira Cloud** | `JIRA_API_TOKEN`<br>`JIRA_USER_EMAIL` | Scopes: `read:jira-work`, `write:jira-work` | [Atlassian API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| **GitLab** | `GITLAB_TOKEN` (or `glab auth login`) | `api` (or `read_api` + `write_repository`) | [GitLab Access Tokens](https://gitlab.com/-/user_settings/personal_access_tokens) |
+| **Azure DevOps** | `AZURE_DEVOPS_EXT_PAT` (or `az devops login`) | `Work Items (Read & write)`<br>`Code (Read & write)` | [Azure DevOps PATs](https://dev.azure.com/) (User Settings &rarr; Personal Access Tokens) |
+| **GitHub** | `GITHUB_TOKEN` (or `gh auth login`) | `repo` (or fine-grained: Issues, PRs, Contents) | [GitHub Token Settings](https://github.com/settings/tokens) |
+
+Run `python scripts/workspace_doctor.py` to verify whether credentials are correctly loaded for your configured tracker.
+
 ---
 
 ## 2. Autonomous AI Definition of Ready (DoR) & Sizing

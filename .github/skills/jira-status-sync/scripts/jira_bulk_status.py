@@ -2,12 +2,35 @@
 """Batch query Jira ticket status via REST API."""
 
 import argparse
+import base64
 import json
 import os
 import sys
-import urllib.request
 import urllib.parse
-import base64
+import urllib.request
+from pathlib import Path
+
+
+def load_local_env() -> None:
+    """Load credentials from .env.local or .env if present."""
+    search_dirs = [Path.cwd(), Path(__file__).resolve().parents[4]]
+    for directory in search_dirs:
+        for filename in (".env.local", ".env"):
+            env_file = directory / filename
+            if env_file.is_file():
+                try:
+                    for line in env_file.read_text(encoding="utf-8").splitlines():
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+                except Exception:
+                    pass
+                return
 
 
 def query_jira(base_url: str, keys: list[str], auth_header: str | None = None) -> dict[str, str]:
@@ -31,6 +54,7 @@ def query_jira(base_url: str, keys: list[str], auth_header: str | None = None) -
 
 
 def main():
+    load_local_env()
     parser = argparse.ArgumentParser(description="Query Jira statuses.")
     parser.add_argument("keys", nargs="+", help="Jira issue keys")
     parser.add_argument("--url", default=os.getenv("JIRA_BASE_URL", "https://jira.atlassian.net"))

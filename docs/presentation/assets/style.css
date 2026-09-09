@@ -466,6 +466,26 @@ h3 {
   font-size: 0.95rem;
 }
 
+.callout h3 {
+  margin-top: 0;
+}
+
+/* Source / citation box */
+.source-box {
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  margin: 24px 0;
+}
+
+.source-box p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 /* Metrics Grid */
 .metrics-grid {
   display: grid;

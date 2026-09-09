@@ -176,12 +176,16 @@ def run_interactive_wizard() -> WorkspaceConfig:
     if cfg.tracker_type == "jira":
         cfg.tracker_base_url = prompt_text("Jira Base URL", "https://company.atlassian.net")
         cfg.tracker_project_key = prompt_text("Jira Project Key", "PROJ")
+        print(f"  {DIM}ℹ Note: Jira Cloud integration uses JIRA_API_TOKEN (scopes: read:jira-work, write:jira-work) configured in .env.local{RESET}")
     elif cfg.tracker_type == "github":
         cfg.tracker_base_url = prompt_text("GitHub Repository / Project URL", f"https://github.com/{cfg.org}/main-repo")
+        print(f"  {DIM}ℹ Note: GitHub integration uses GITHUB_TOKEN (scope: repo) or 'gh auth login'{RESET}")
     elif cfg.tracker_type == "gitlab":
         cfg.tracker_base_url = prompt_text("GitLab Group / Project URL", f"https://gitlab.com/{cfg.org}/main-repo")
+        print(f"  {DIM}ℹ Note: GitLab integration uses GITLAB_TOKEN (scope: api) or 'glab auth login'{RESET}")
     elif cfg.tracker_type == "azure-devops":
         cfg.tracker_base_url = prompt_text("Azure DevOps Project URL", f"https://dev.azure.com/{cfg.org}/project")
+        print(f"  {DIM}ℹ Note: Azure DevOps integration uses AZURE_DEVOPS_EXT_PAT (Work Items & Code Read/Write) or 'az devops login'{RESET}")
 
     print(f"\n{BLUE}{BOLD}--- Section 4: Version Control & Code Reviews ---{RESET}")
     vcs_choices = [
@@ -687,6 +691,150 @@ if __name__ == "__main__":
 '''
 
 
+def render_env_example(cfg: WorkspaceConfig) -> str:
+    """Generate a tailored .env.example with instructions, links, and required permissions."""
+    lines = [
+        "# =====================================================================",
+        "# saiga-cart Local Environment & API Credentials",
+        "# =====================================================================",
+        "# Copy this file to `.env.local` (or `.env`) in the workspace root:",
+        "#   cp .env.example .env.local",
+        "#",
+        "# `.env.local` and `.env` are listed in .gitignore and will NEVER be committed.",
+        "# These tokens enable autonomous agents, skills, and CLI scripts to interact",
+        "# with your remote issue tracker and version control platforms.",
+        "# =====================================================================",
+        "",
+    ]
+
+    has_entries = False
+
+    # Jira
+    if cfg.tracker_type == "jira":
+        has_entries = True
+        lines.extend([
+            "# ---------------------------------------------------------------------",
+            "# Jira Cloud (Atlassian)",
+            "# ---------------------------------------------------------------------",
+            "# Where to create token:",
+            "#   https://id.atlassian.com/manage-profile/security/api-tokens",
+            "# Required permissions / scopes:",
+            "#   - An Atlassian account API Token with read & write access to Jira",
+            "#   - Required scopes: read:jira-work, write:jira-work",
+            "# Used by skills: jira-story-onboard, jira-status-sync",
+            f"JIRA_BASE_URL={cfg.tracker_base_url}",
+            "JIRA_USER_EMAIL=your-email@company.com",
+            "JIRA_API_TOKEN=your_jira_api_token_here",
+            "",
+        ])
+
+    # GitLab
+    if cfg.tracker_type == "gitlab" or cfg.vcs_platform == "gitlab":
+        has_entries = True
+        gl_url = cfg.tracker_base_url if cfg.tracker_type == "gitlab" else "https://gitlab.com"
+        lines.extend([
+            "# ---------------------------------------------------------------------",
+            "# GitLab (Issues & Merge Requests)",
+            "# ---------------------------------------------------------------------",
+            "# Where to create token:",
+            "#   GitLab -> Preferences / User Settings -> Access Tokens",
+            "#   Direct link: https://gitlab.com/-/user_settings/personal_access_tokens",
+            "# Required permissions / scopes:",
+            "#   - `api` (full API access to create issues, query status, manage MRs)",
+            "#   - Alternatively: `read_api` (read issues/MRs) + `write_repository` (push branches)",
+            "# Local CLI alternative: run `glab auth login` to authenticate the GitLab CLI",
+            "# Used by skills: gitlab-issue-onboard, pr-create",
+            f"GITLAB_BASE_URL={gl_url}",
+            "GITLAB_TOKEN=glpat-your_gitlab_pat_here",
+            "",
+        ])
+
+    # Azure DevOps
+    if cfg.tracker_type == "azure-devops" or cfg.vcs_platform == "azure-repos":
+        has_entries = True
+        lines.extend([
+            "# ---------------------------------------------------------------------",
+            "# Azure DevOps (Boards & Azure Repos)",
+            "# ---------------------------------------------------------------------",
+            "# Where to create token:",
+            "#   Azure DevOps -> User Settings (top right gear/user icon) -> Personal access tokens",
+            "#   Direct link: https://dev.azure.com/{organization}/_usersSettings/tokens",
+            "# Required permissions / scopes:",
+            "#   - Work Items: `Read & write` (for creating user stories/tasks and updating status)",
+            "#   - Code: `Read & write` (for branches, pull requests, and sibling checkouts)",
+            "# Local CLI alternative: run `az devops login`",
+            "# Used by skills: ado-work-item-onboard",
+            f"AZURE_DEVOPS_ORG_URL={cfg.tracker_base_url}",
+            "AZURE_DEVOPS_EXT_PAT=your_azure_devops_pat_here",
+            "",
+        ])
+
+    # GitHub
+    if cfg.tracker_type == "github" or cfg.vcs_platform == "github":
+        has_entries = True
+        lines.extend([
+            "# ---------------------------------------------------------------------",
+            "# GitHub (Issues & Pull Requests)",
+            "# ---------------------------------------------------------------------",
+            "# Where to create token:",
+            "#   GitHub -> Settings -> Developer settings -> Personal access tokens",
+            "#   Direct link: https://github.com/settings/tokens",
+            "# Required permissions / scopes:",
+            "#   - Classic PAT: `repo` (Full control of private repositories)",
+            "#   - Fine-grained PAT:",
+            "#       * Issues: Read and write",
+            "#       * Pull requests: Read and write",
+            "#       * Contents: Read and write",
+            "# Local CLI alternative: run `gh auth login` to authenticate the GitHub CLI",
+            "# Used by skills: github-issue-onboard, github-status-sync, pr-create",
+            "GITHUB_TOKEN=ghp_your_github_token_here",
+            "",
+        ])
+
+    if not has_entries:
+        lines.extend([
+            "# (No external tracker or VCS configured that requires tokens)",
+            "",
+        ])
+
+    return "\n".join(lines)
+
+
+def print_token_setup_instructions(cfg: WorkspaceConfig) -> None:
+    if cfg.tracker_type == "none" and cfg.vcs_platform not in ("github", "gitlab", "azure-repos"):
+        return
+
+    print(f"\n{BLUE}{BOLD}🔑 Authentication & Token Setup (for Agents & Skills):{RESET}")
+    print(f"  A template file has been generated at: {CYAN}.env.example{RESET}")
+    print(f"  To enable autonomous skills (ticket sync, issue onboarding, PR/MR creation):")
+    print(f"    1. Copy template to local file: {CYAN}cp .env.example .env.local{RESET}  {DIM}(ignored by git){RESET}")
+    print(f"    2. Generate a Personal Access Token (PAT) with required permissions:")
+
+    if cfg.tracker_type == "jira":
+        print(f"\n  {BOLD}• Jira Cloud API Token:{RESET}")
+        print(f"    - URL: {CYAN}https://id.atlassian.com/manage-profile/security/api-tokens{RESET}")
+        print(f"    - Required scopes: {BOLD}read:jira-work{RESET}, {BOLD}write:jira-work{RESET}")
+        print(f"    - Set in .env.local: {CYAN}JIRA_API_TOKEN{RESET}, {CYAN}JIRA_USER_EMAIL{RESET}, and {CYAN}JIRA_BASE_URL{RESET}")
+
+    if cfg.tracker_type == "gitlab" or cfg.vcs_platform == "gitlab":
+        print(f"\n  {BOLD}• GitLab Personal Access Token:{RESET}")
+        print(f"    - URL: {CYAN}https://gitlab.com/-/user_settings/personal_access_tokens{RESET} (or self-hosted)")
+        print(f"    - Required scopes: {BOLD}api{RESET} (or {BOLD}read_api{RESET} + {BOLD}write_repository{RESET})")
+        print(f"    - Set in .env.local: {CYAN}GITLAB_TOKEN{RESET}, or authenticate CLI: {CYAN}glab auth login{RESET}")
+
+    if cfg.tracker_type == "azure-devops" or cfg.vcs_platform == "azure-repos":
+        print(f"\n  {BOLD}• Azure DevOps Personal Access Token:{RESET}")
+        print(f"    - URL: User Settings -> Personal Access Tokens ({CYAN}https://dev.azure.com/{cfg.org}/_usersSettings/tokens{RESET})")
+        print(f"    - Required scopes: {BOLD}Work Items (Read & write){RESET} and {BOLD}Code (Read & write){RESET}")
+        print(f"    - Set in .env.local: {CYAN}AZURE_DEVOPS_EXT_PAT{RESET}, or authenticate CLI: {CYAN}az devops login{RESET}")
+
+    if cfg.tracker_type == "github" or cfg.vcs_platform == "github":
+        print(f"\n  {BOLD}• GitHub Personal Access Token:{RESET}")
+        print(f"    - URL: {CYAN}https://github.com/settings/tokens{RESET}")
+        print(f"    - Required scopes: {BOLD}repo{RESET} (or Fine-grained: Issues, Pull requests, Contents Read & Write)")
+        print(f"    - Set in .env.local: {CYAN}GITHUB_TOKEN{RESET}, or authenticate CLI: {CYAN}gh auth login{RESET}")
+
+
 def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     print(f"\n{GREEN}{BOLD}Scaffolding workspace in: {root}{RESET}")
     
@@ -784,7 +932,12 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     )
     print("  Created scripts/clone_siblings.py")
 
-    # 5. Prune irrelevant skill directories if requested
+    # 5. Generate .env.example with credential instructions and required permissions
+    env_example = root / ".env.example"
+    env_example.write_text(render_env_example(cfg), encoding="utf-8")
+    print("  ✔ Created .env.example (template for local authentication tokens)")
+
+    # 6. Prune irrelevant skill directories if requested
     skills_dir = root / ".github" / "skills"
     if skills_dir.is_dir():
         if cfg.tracker_type != "jira":
@@ -807,10 +960,12 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
                 shutil.rmtree(p)
 
     print(f"\n{GREEN}{BOLD}🎉 Workspace successfully bootstrapped!{RESET}")
-    print(f"\nNext steps:")
-    print(f"  1. Run {CYAN}{Path(sys.executable).name} scripts/clone_siblings.py{RESET} to checkout sibling repos.")
-    print(f"  2. Open the multi-root workspace: {CYAN}code {cfg.slug}.code-workspace{RESET}")
-    print(f"  3. Run diagnostics: {CYAN}{Path(sys.executable).name} scripts/workspace_doctor.py{RESET}\n")
+    print_token_setup_instructions(cfg)
+    print(f"\n{BOLD}Next steps:{RESET}")
+    print(f"  1. Set up local credentials: {CYAN}cp .env.example .env.local{RESET} and populate required token(s).")
+    print(f"  2. Run {CYAN}{Path(sys.executable).name} scripts/clone_siblings.py{RESET} to checkout sibling repos.")
+    print(f"  3. Open the multi-root workspace: {CYAN}code {cfg.slug}.code-workspace{RESET}")
+    print(f"  4. Run diagnostics: {CYAN}{Path(sys.executable).name} scripts/workspace_doctor.py{RESET}\n")
 
 
 def prepare_output_directory(source: Path, target: Path) -> Path:

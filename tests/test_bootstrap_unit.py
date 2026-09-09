@@ -122,6 +122,42 @@ class TestBootstrapUnit(unittest.TestCase):
             )
             self.assertEqual(manifest, [config.siblings[0].__dict__])
             self.assertTrue((root / "scripts" / "clone_siblings.py").is_file())
+            self.assertTrue((root / ".env.example").is_file())
+
+    def test_render_env_example_jira(self) -> None:
+        cfg = bootstrap.WorkspaceConfig(
+            tracker_type="jira",
+            tracker_base_url="https://acme.atlassian.net",
+            vcs_platform="gitlab",
+        )
+        content = bootstrap.render_env_example(cfg)
+        self.assertIn("JIRA_API_TOKEN", content)
+        self.assertIn("read:jira-work, write:jira-work", content)
+        self.assertIn("https://id.atlassian.com/manage-profile/security/api-tokens", content)
+        self.assertIn("GITLAB_TOKEN", content)
+        self.assertIn("api", content)
+
+    def test_render_env_example_ado(self) -> None:
+        cfg = bootstrap.WorkspaceConfig(
+            tracker_type="azure-devops",
+            tracker_base_url="https://dev.azure.com/acme",
+            vcs_platform="azure-repos",
+        )
+        content = bootstrap.render_env_example(cfg)
+        self.assertIn("AZURE_DEVOPS_EXT_PAT", content)
+        self.assertIn("Work Items: `Read & write`", content)
+        self.assertIn("Code: `Read & write`", content)
+        self.assertIn("az devops login", content)
+
+    def test_render_env_example_github(self) -> None:
+        cfg = bootstrap.WorkspaceConfig(
+            tracker_type="github",
+            vcs_platform="github",
+        )
+        content = bootstrap.render_env_example(cfg)
+        self.assertIn("GITHUB_TOKEN", content)
+        self.assertIn("repo", content)
+        self.assertIn("gh auth login", content)
 
 
 if __name__ == "__main__":
