@@ -98,7 +98,10 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  width: min(var(--measure), calc(100% - 32px));
+  /* Wider than the reading measure: this is chrome/navigation, not body
+     copy, and the extra room lets more of the (now 11-page) topnav fit
+     before it needs to scroll. */
+  width: min(1360px, calc(100% - 32px));
   min-height: 56px;
   margin: 0 auto;
 }
