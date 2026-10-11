@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Comparing the two valid operating modes of AI-assisted engineering: typing helper vs. system-aware partner.">
+  <title>Modes · Two Operating Modes</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <img src="assets/favicon.svg" alt="saiga-cart logo" class="brand-icon" width="22" height="22">
+        <span>saiga-cart</span>
+        <span class="brand-badge">Guide</span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="index.html"><span class="nav-num">01</span> Start</a>
+        <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
+        <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
+        <a href="03-bottleneck.html"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html" aria-current="page"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
+    <header class="page-head">
+      <div class="page-meta">
+        <span class="kicker active">Modes · 5 / 9</span>
+      </div>
+      <h1>Two Operating Modes</h1>
+      <p class="lede">AI-assisted engineering operates effectively at two distinct scales. Problems arise only when teams ask for Mode B results with Mode A tooling.</p>
+      
+      <div class="takeaway-box">
+        <div class="takeaway-icon">🎯</div>
+        <div class="takeaway-content">
+          <strong>The governing rule:</strong> Specification, context, and verification must match the blast radius of the task. Local typing needs little overhead; cross-repo features require a durable shared contract.
+        </div>
+      </div>
+    </header>
+
+    <section aria-labelledby="modes-heading">
+      <span class="section-label">Side-by-Side Comparison</span>
+      <h2 id="modes-heading">Matching Method to Scope</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <span class="card-number">Mode A</span>
+          <h3>Typing Helper</h3>
+          <p><strong>Scope:</strong> Boilerplate, snippets, and genuinely local edits.</p>
+          <p><strong>Context:</strong> Nearby code and relevant repository instructions; the human supplies the wider system model.</p>
+          <p><strong>Verification:</strong> Focused checks appropriate to the change.</p>
+          <p><strong>Human role:</strong> Direct the edit and review its effect.</p>
+        </article>
+
+        <article class="card success span-6">
+          <span class="card-number">Mode B</span>
+          <h3>System-Aware Partner</h3>
+          <p><strong>Scope:</strong> Feature delivery, API refactors, and cross-repository work.</p>
+          <p><strong>Context:</strong> Instructions, architecture, ADRs, active plans, and affected sibling repositories.</p>
+          <p><strong>Verification:</strong> Contract-level tests, relevant suites, and human audit.</p>
+          <p><strong>Human role:</strong> Approve boundaries, judge evidence, and authorize merge.</p>
+        </article>
+      </div>
+    </section>
+
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="prev" href="03-bottleneck.html">
+        <span aria-hidden="true">←</span>
+        <div>
+          <span class="page-nav-meta">Previous · Page 4</span>
+          <span>The Bottleneck Moved</span>
+        </div>
+      </a>
+      <a class="next" href="06-four-artifacts.html">
+        <div>
+          <span class="page-nav-meta">Next · Page 6</span>
+          <span>Four Artifacts</span>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="site-footer">
+    <span>saiga-cart Guide · Page 5 of 9</span>
+    <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
+  </footer>
+</body>
+</html>

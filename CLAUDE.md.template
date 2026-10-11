@@ -1,0 +1,11 @@
+# Claude Instructions — {{WORKSPACE_NAME|default("AI Workspace")}}
+
+This repository uses a multi-repository, AI-native workspace pattern.
+
+## Core Rules
+- Read `AGENTS.md`, `docs/workflow.md`, and `docs/architecture.md` for workspace conventions.
+- Planning source of truth is under `docs/planning/`.
+- Maintain strict separation between remote issue trackers and local story markdown files.
+- Before implementing a story, verify it has `Definition of Ready | Done` and `Effort | Small` or `Medium`.
+- Prefer micro-surgical edits over large refactors.
+- Verify changes with targeted test commands before submitting merge/pull requests.

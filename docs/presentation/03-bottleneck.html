@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AI makes implementation faster, moving the limiting work to clear specifications, durable decisions, and executable verification.">
+  <title>The Shift · The Bottleneck Moved</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <img src="assets/favicon.svg" alt="saiga-cart logo" class="brand-icon" width="22" height="22">
+        <span>saiga-cart</span>
+        <span class="brand-badge">Guide</span>
+      </a>
+      <nav class="topnav" aria-label="Presentation sections">
+        <a href="index.html"><span class="nav-num">01</span> Start</a>
+        <a href="01-problem.html"><span class="nav-num">02</span> Drift</a>
+        <a href="02-context-tax.html"><span class="nav-num">03</span> Context Tax</a>
+        <a href="03-bottleneck.html" aria-current="page"><span class="nav-num">04</span> The Shift</a>
+        <a href="05-modes.html"><span class="nav-num">05</span> Modes</a>
+        <a href="06-four-artifacts.html"><span class="nav-num">06</span> Four Artifacts</a>
+        <a href="07-colocation.html"><span class="nav-num">07</span> Co-location</a>
+        <a href="08-roles.html"><span class="nav-num">08</span> Roles &amp; Flow</a>
+        <a href="10-payoff.html"><span class="nav-num">09</span> Adopt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content" class="guide">
+    <aside class="guide-resource" aria-label="Related resource"><a href="ai-agile-manifesto.html">AI Agile Manifesto</a></aside>
+    <header class="page-head">
+      <div class="page-meta">
+        <span class="kicker active">The Shift · 4 / 9</span>
+      </div>
+      <h1>The Bottleneck Moved</h1>
+      <p class="lede">AI can generate implementation faster than a human can determine whether a large diff belongs in the system. The scarce work is making intent precise enough to direct, constrain, and prove the change.</p>
+
+      <div class="takeaway-box">
+        <div class="takeaway-icon">↗</div>
+        <div class="takeaway-content">
+          <strong>Oversight moves upstream:</strong> begin review with the design contract, then use the implementation and its evidence to confirm that contract was met.
+        </div>
+      </div>
+    </header>
+
+    <section aria-labelledby="shift-heading">
+      <span class="section-label">What Changed</span>
+      <h2 id="shift-heading">The Control Point Moves Upstream</h2>
+      <div class="grid">
+        <article class="card span-6">
+          <h3>Before Fast Generation</h3>
+          <p><strong>Delivery:</strong> Implementation time limits delivery.</p>
+          <p><strong>Review:</strong> Much of the design is discovered from the diff.</p>
+          <p><strong>Context:</strong> Code holds much of the team's implicit knowledge.</p>
+        </article>
+        <article class="card success span-6">
+          <h3>With Fast Generation</h3>
+          <p><strong>Delivery:</strong> Unambiguous intent and reliable verification limit safe delivery.</p>
+          <p><strong>Review:</strong> Begin with the design contract; the diff demonstrates conformance.</p>
+          <p><strong>Context:</strong> Record constraints so every human and agent session applies them consistently.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="limit-heading">
+      <div class="callout info">
+        <h3 id="limit-heading">Rebalance the Work, Not the Goal</h3>
+        <p>Customer discovery and feedback still lead; working software remains the goal. Keep specifications small and risk-scaled: outcome, boundaries, key decisions, and proof. A local edit may need only a clear task and focused test; migrations and cross-repository work need more. Update intent as you learn, rather than fixing every requirement up front.</p>
+      </div>
+    </section>
+
+    <section class="source-box" aria-label="Source">
+      <p><strong>Source:</strong> The bottleneck-shift and Agile-rebalancing framing is adapted from the Sputnik AI workspace presentation and Axel Molist's <a href="https://youtu.be/h0hdaHPKDdI?si=JOeBVsijadSHKTHy" target="_blank" rel="noopener">What 6 months of AI coding did to my dev team</a>. This guide does not treat <a href="https://agilemanifesto.org/">Agile Manifesto</a> values as obsolete.</p>
+    </section>
+
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="prev" href="02-context-tax.html">
+        <span aria-hidden="true">←</span>
+        <div>
+          <span class="page-nav-meta">Previous · Page 3</span>
+          <span>The Daily Context Tax</span>
+        </div>
+      </a>
+      <a class="next" href="05-modes.html">
+        <div>
+          <span class="page-nav-meta">Next · Page 5</span>
+          <span>Two Operating Modes</span>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="site-footer">
+    <span>saiga-cart Guide · Page 4 of 9</span>
+    <span class="keyboard-hint">Use <kbd>←</kbd> and <kbd>→</kbd> keys to navigate</span>
+  </footer>
+</body>
+</html>

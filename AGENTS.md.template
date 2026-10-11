@@ -1,0 +1,50 @@
+# Agent Instructions — {{WORKSPACE_NAME|default("AI Workspace")}}
+
+This workspace has **two purposes**, and this file governs both:
+
+1. **Cross-repo AI context** — it coordinates changes across sibling repositories so AI agents and developers can reason about and modify the entire system in a single unified session.
+2. **Project / Delivery planning** — it hosts a durable planning tree under `docs/planning/` that agents help author, sequence, refine, and keep synchronized with implementation reality.
+
+Read this file before making any changes.
+
+Also read `docs/architecture.md` (cross-repo component boundaries), `docs/workflow.md` (conventions & DoR/DoD), and `docs/planning/README.md` (active cycles/increments) before planning or suggesting architectural changes.
+
+---
+
+## Instruction Precedence & Reading Path
+
+Use this order when workspace documents overlap:
+
+1. `AGENTS.md` routes work and defines workspace-wide safety and ownership boundaries.
+2. `docs/workflow.md` is the canonical source for cross-cutting process rules, story sizing, and DoR/DoD gates.
+3. `docs/architecture.md` is the canonical summary of current cross-repository state.
+4. Accepted ADRs (`docs/adr/`) record binding architectural decisions; newer superseding ADRs win.
+5. The [skill index](.github/skills/README.md) routes specialized tasks to task-specific `SKILL.md` procedures.
+6. Planning files (timebox READMEs, goal/epic plans, and story files) define scope and acceptance criteria for specific work items.
+
+---
+
+## Repositories in this Workspace
+
+{{SIBLING_REPOS_SECTION}}
+
+---
+
+## Plan Mode / Agent Mode Discipline (Always Apply)
+
+- **Plan Mode:** Before ending a planning session, write/update the relevant `plan.md` and `progress.md` files under `docs/planning/`. Never leave plans only in chat or session memory.
+- **Agent Mode:** After implementing and verifying a step, use targeted test or build commands as verification evidence. Keep PR/MR descriptions high-level and functional without pasting terminal output or prompt transcripts.
+- **Definition of Ready (DoR):** Only pick up a story whose `Definition of Ready` is `Done` and whose `Effort` is `Small` or `Medium`. If a story is `Large` or incomplete, run `story-refiner` to decompose or refine it first.
+- **Stories are Independent by Default:** Most stories have no prerequisites and can be worked on in parallel. Only stories carrying an explicit `Depends on` link must wait.
+- **Architecture Reality:** If a merged change alters system architecture or directory contracts, update `docs/architecture.md` in the same PR/MR.
+- **ADR Discipline:** If a plan commits to a non-obvious or hard-to-reverse choice, write a companion ADR under `docs/adr/`.
+- **Issue Tracker Bidirectional Linking:** When onboarding a story into the issue tracker, link both ways: ticket points to repo permalink, and story file points to ticket key.
+
+---
+
+## Engineering & Execution Heuristics
+
+- **Micro-Surgical Discipline:** Touch only what the task requires; do not refactor or restyle adjacent code. Clean up any temporary files or orphans introduced by your change.
+- **Simplicity First:** Ship the simplest complete solution; avoid speculative abstractions or unused parameters.
+- **Confused-State Gating:** If requirements, configurations, or target states are ambiguous, stop and ask the user for clarification before editing.
+- **Multi-Model Consensus Review:** For high-blast-radius changes (database migrations, security, public API breaking changes), invoke `consensus-check` before proceeding.
