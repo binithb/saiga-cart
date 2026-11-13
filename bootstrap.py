@@ -742,16 +742,55 @@ def prompt_and_verify_siblings(cfg: WorkspaceConfig) -> list[SiblingRepo]:
     return siblings
 
 
-def run_interactive_wizard(root: Path | None = None) -> WorkspaceConfig:
-    target_root = (root or Path.cwd()).resolve()
+def prompt_target_directory(source: Path, suggested_slug: str) -> Path:
+    """Ask the user where to scaffold the workspace (a new directory vs. in-place)."""
+    source = source.resolve()
+    default_new_dir = source.parent / suggested_slug
+    print(f"\n{BOLD}Where should this workspace be initialized?{RESET}")
+    print(f"  {DIM}Recommended: create a dedicated new folder beside {source.name} so your template checkout stays clean,{RESET}")
+    print(f"  {DIM}and sibling repositories will be cloned into {source.parent}.{RESET}")
+    loc_choices = [
+        ("new-folder", f"Create a new workspace directory (default: {default_new_dir})"),
+        ("in-place", f"Initialize in current directory ({source})"),
+    ]
+    mode = prompt_choice("Target Workspace Location", loc_choices, "new-folder")
+    if mode == "in-place":
+        return source
+
+    while True:
+        raw_dir = prompt_text("Target directory path for new workspace", str(default_new_dir))
+        candidate = Path(raw_dir).expanduser()
+        if not candidate.is_absolute():
+            candidate = (Path.cwd() / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+        if candidate == source:
+            return source
+        if candidate.exists() and any(candidate.iterdir()):
+            print(f"  {YELLOW}✖ Target directory '{candidate}' already exists and is not empty. Choose an empty or new folder path.{RESET}")
+            continue
+        return candidate
+
+
+def run_interactive_wizard(
+    root: Path | None = None,
+    explicit_output: Path | None = None,
+) -> tuple[WorkspaceConfig, Path]:
+    source_root = (root or Path(__file__).resolve().parent).resolve()
     cfg = WorkspaceConfig()
     
-    print(f"\n{BLUE}{BOLD}--- Section 1: Workspace Identity ---{RESET}")
+    print(f"\n{BLUE}{BOLD}--- Section 1: Workspace Identity & Location ---{RESET}")
     cfg.name = prompt_text("Workspace / Project Display Name", "Acme Platform AI Workspace")
     suggested_slug = re.sub(r"[^a-z0-9]+", "-", cfg.name.lower()).strip("-")
     cfg.slug = prompt_text("Workspace Directory / File Slug", suggested_slug)
     cfg.description = prompt_text("Short Description", "Multi-repository AI planning and execution workspace")
     cfg.org = prompt_text("Organization / Company / Namespace", "acme-corp")
+
+    if explicit_output is not None:
+        target_root = explicit_output.resolve()
+    else:
+        target_root = prompt_target_directory(source_root, cfg.slug)
+    target_root = prepare_output_directory(source_root, target_root)
 
     print(f"\n{BLUE}{BOLD}--- Section 2: Planning Methodology & Cadence ---{RESET}")
     framework_choices = [
@@ -828,7 +867,7 @@ def run_interactive_wizard(root: Path | None = None) -> WorkspaceConfig:
     cfg.claude = prompt_bool("Generate Claude Code instructions (CLAUDE.md)?", True)
     cfg.cursor = prompt_bool("Generate Cursor IDE rules (.cursorrules)?", True)
 
-    return cfg
+    return cfg, target_root
 
 
 def render_template_str(template: str, context: dict[str, str]) -> str:
@@ -1772,7 +1811,12 @@ def prepare_output_directory(source: Path, target: Path) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Bootstrap a saiga-cart AI Workspace.")
     parser.add_argument("--config", type=Path, help="Path to existing workspace.yaml / config file")
-    parser.add_argument("--output", type=Path, default=Path.cwd(), help="Target directory")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Target directory for the generated workspace (prompted interactively if omitted)",
+    )
     parser.add_argument("--non-interactive", action="store_true", help="Run without prompts using defaults/presets")
     parser.add_argument(
         "--add-sibling",
@@ -1791,7 +1835,9 @@ def main() -> None:
     args = parse_args()
     print_banner()
 
-    target_dir = args.output.resolve()
+    source_dir = Path(__file__).resolve().parent
+    explicit_output = args.output.resolve() if args.output is not None else None
+    target_dir = explicit_output or Path.cwd().resolve()
 
     if args.add_sibling:
         ws_path = args.config.resolve() if args.config else (target_dir / "workspace.yaml")
@@ -1812,18 +1858,14 @@ def main() -> None:
             subprocess.run([sys.executable, str(ws_path.parent / "scripts" / "clone_siblings.py")], check=False)
         return
 
-    try:
-        output = prepare_output_directory(Path(__file__).resolve().parent, target_dir)
-    except ValueError as error:
-        print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
-        raise SystemExit(2)
-
     cfg: WorkspaceConfig
+    output: Path
     is_interactive = False
     if args.config:
         config_path = args.config.resolve()
         try:
             cfg = load_workspace_config(config_path)
+            output = prepare_output_directory(source_dir, explicit_output or config_path.parent)
         except (ValueError, FileNotFoundError) as error:
             print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)
@@ -1836,6 +1878,11 @@ def main() -> None:
             tracker_type="github",
             vcs_platform="github",
         )
+        try:
+            output = prepare_output_directory(source_dir, target_dir)
+        except ValueError as error:
+            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
     elif args.preset == "jira-safe":
         cfg = WorkspaceConfig(
             name="Acme Enterprise SAFe Workspace",
@@ -1845,6 +1892,11 @@ def main() -> None:
             tracker_type="jira",
             vcs_platform="gitlab",
         )
+        try:
+            output = prepare_output_directory(source_dir, target_dir)
+        except ValueError as error:
+            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
     elif args.preset in ("ado-scrum", "azure-devops"):
         cfg = WorkspaceConfig(
             name="Acme Azure DevOps Workspace",
@@ -1856,9 +1908,18 @@ def main() -> None:
             tracker_project_key="ACME",
             vcs_platform="azure-repos",
         )
+        try:
+            output = prepare_output_directory(source_dir, target_dir)
+        except ValueError as error:
+            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
     else:
         is_interactive = True
-        cfg = run_interactive_wizard(output)
+        try:
+            cfg, output = run_interactive_wizard(source_dir, explicit_output=explicit_output)
+        except ValueError as error:
+            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
 
     generate_workspace(cfg, output)
 

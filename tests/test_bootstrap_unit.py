@@ -330,6 +330,27 @@ class TestBootstrapUnit(unittest.TestCase):
         self.assertIn("story-refiner", primer)
         self.assertIn("consensus-check", primer)
 
+    def test_prompt_target_directory_defaults_to_new_folder_and_rejects_non_empty(self) -> None:
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            source = parent / "saiga-cart"
+            source.mkdir()
+
+            occupied = parent / "occupied-ws"
+            occupied.mkdir()
+            (occupied / "file.txt").write_text("busy", encoding="utf-8")
+
+            # 1. Select default "new-folder" ("")
+            # 2. Enter non-empty occupied directory -> rejected
+            # 3. Accept default new directory ("") -> parent / "my-new-ws"
+            inputs = iter(["", str(occupied), ""])
+            with mock.patch("builtins.input", side_effect=lambda _prompt="": next(inputs)):
+                chosen = bootstrap.prompt_target_directory(source, "my-new-ws")
+
+            self.assertEqual(chosen, (parent / "my-new-ws").resolve())
+
 
 if __name__ == "__main__":
     unittest.main()

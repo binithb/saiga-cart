@@ -46,41 +46,53 @@ Use `python` on macOS/Linux or `py -3` on Windows if `python` is unavailable.
 
 ## 🚀 Quickstart: Bootstrapping a New Workspace
 
-### Option A: Use as GitHub Template (Recommended)
-1. Click **Use this template** on GitHub to create your own repository.
-2. Clone your newly created repository:
+> **💡 Recommended Folder Layout**: Set up your workspace in its own **new folder** inside a shared parent directory (e.g., `~/work/my-ai-workspace`), rather than modifying your raw `saiga-cart` clone in-place. Because sibling repositories are checked out **beside** the workspace folder (`../service-a`, `../service-b`), this keeps your multi-repo parent directory clean and organized:
+> ```text
+> ~/work/
+> ├── saiga-cart/                # Template / generator repo (stays clean)
+> ├── my-ai-workspace/           # Your generated workspace (--output ../my-ai-workspace)
+> ├── service-a/                 # Cloned sibling repo 1
+> └── service-b/                 # Cloned sibling repo 2
+> ```
+
+### Option A: Interactive Setup into a New Folder (Recommended)
+1. Clone `saiga-cart` inside your parent workspace directory:
    ```bash
-   git clone git@github.com:your-org/your-ai-workspace.git
-   cd your-ai-workspace
+   mkdir -p ~/work && cd ~/work
+   git clone https://github.com/binithb/saiga-cart.git
+   cd saiga-cart
    ```
-3. Run the interactive setup wizard:
+2. Run the interactive setup wizard (it will prompt you for your new workspace folder path, defaulting to `../<workspace-slug>`, or you can pass `--output ../my-ai-workspace` explicitly):
    ```bash
    python bootstrap.py
+   # Or specify the target folder directly:
+   python bootstrap.py --output ../my-ai-workspace
    ```
-5. Follow the prompts to configure your planning framework, issue tracker, local credentials (`.env.azure`, `.env.jira`, `.env.github`, `.env.gitlab`, or `.env.local` / CLI keyring), and verified sibling repositories.
-6. Clone your sibling repositories (if not cloned automatically during setup):
+3. Follow the prompts to configure your target workspace directory, planning framework, issue tracker, local credentials (`.env.azure`, `.env.jira`, `.env.github`, `.env.gitlab`, or `.env.local` / CLI keyring), and verified sibling repositories.
+4. Switch into your newly created workspace folder and clone your sibling repositories (if not cloned automatically during setup):
    ```bash
+   cd ../my-ai-workspace
    python scripts/clone_siblings.py
    ```
-7. Add more sibling repositories anytime later:
+5. Add more sibling repositories anytime later from inside your generated workspace:
    ```bash
    python bootstrap.py --add-sibling
    ```
-8. Open in VS Code / Cursor:
+6. Open the unified multi-root workspace in VS Code / Cursor:
    ```bash
-   code your-workspace.code-workspace
+   code my-ai-workspace.code-workspace
    ```
 
-### Option B: Non-Interactive / CI Preset
+### Option B: Non-Interactive / CI Preset into a New Folder
 ```bash
 # Scrum + GitHub Issues
-python bootstrap.py --preset github-scrum
+python bootstrap.py --preset github-scrum --output ../my-gh-workspace
 
 # SAFe (PIs) + Jira Cloud
-python bootstrap.py --preset jira-safe
+python bootstrap.py --preset jira-safe --output ../my-jira-workspace
 
 # Scrum + Azure DevOps
-python bootstrap.py --preset ado-scrum
+python bootstrap.py --preset ado-scrum --output ../my-ado-workspace
 ```
 
 ---
