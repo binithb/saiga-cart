@@ -8,6 +8,9 @@
 | Serves goal | [goal-slug](../plan.md) |
 | Status | Not started |
 
+<!-- Optional: add `| Recurring | Yes |` for operational/maintenance epics that carry forward across PIs. -->
+<!-- Writing standard: Follow ASD-STE100 plain-language rules (active voice, short sentences, GLOSSARY.md terms). -->
+
 TL;DR: one-line summary of the epic.
 
 ## Steps

@@ -9,7 +9,9 @@
 | Definition of Ready | Draft |
 
 <!-- Stories are normally independent. Only when another story in this epic genuinely
-     blocks starting this one, add a Depends on row linking the real story filename. -->
+     blocks starting this one, add a Depends on row linking the real story filename.
+     Writing standard: Follow ASD-STE100 plain-language rules (active voice, short direct
+     sentences, one main requirement per bullet, consistent GLOSSARY.md terms). -->
 
 ## Description
 
@@ -21,7 +23,15 @@ High-level functional objective and business context (synced to Issue Tracker de
 - **Affected Repositories / Components**: `repo-name`, `path/to/module/`
 - **Architecture / ADR References**: link applicable `docs/adr/NNNN-title.md`
 - **Technical Details**: Specific architectural considerations, data formats, or constraints.
-- **Decisions / Assumptions**: Decisions already made and material assumptions the implementer may rely on.
+
+## Decisions / Assumptions
+
+- Decisions already made and material assumptions the implementer may rely on.
+
+## Readiness gaps
+
+<!-- Leave empty once Definition of Ready is Done. While Draft or Pending Clarification,
+     list concrete human decisions or missing inputs as `- <gap>` bullets. -->
 
 ## Non-Goals & Safety Rails
 
@@ -30,12 +40,19 @@ High-level functional objective and business context (synced to Issue Tracker de
 
 ## Acceptance Criteria
 
+<!-- Keep Acceptance Criteria outcome-focused: describe observable functional behavior
+     and verifiable contracts rather than internal variable names or line-by-line code edits. -->
+
 ### Functional (synced to Issue Tracker)
 - [ ] User-facing or functional behavior delivered.
 
 ### Technical & Verification (local source of truth)
-- [ ] Exact command, required environment/credentials, and expected outcome.
-- [ ] CI, test, build, or manual evidence required when local validation is insufficient.
+- [ ] Observable technical contract and expected verification outcome.
+
+## Implementation Steps & Checkpoints
+
+1. Step 1 — bounded change in target repository/module.
+2. Step 2 — run deterministic verification command (`pytest`, `npm test`, `python3 ...`).
 
 ## Definition of Ready (DoR)
 

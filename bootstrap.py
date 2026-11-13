@@ -9,11 +9,17 @@ planning framework (SAFe PIs, Scrum Sprints, Shape Up, Kanban), issue tracker
 from __future__ import annotations
 
 import argparse
+import base64
+import getpass
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -133,7 +139,611 @@ def prompt_bool(label: str, default: bool = True) -> bool:
         sys.exit(0)
 
 
-def run_interactive_wizard() -> WorkspaceConfig:
+def prompt_secret(label: str) -> str:
+    """Prompt for a sensitive token using masked input when connected to a TTY."""
+    try:
+        if sys.stdin.isatty():
+            val = getpass.getpass(f"{BOLD}{label}{RESET} (input hidden): ").strip()
+        else:
+            val = input(f"{BOLD}{label}{RESET}: ").strip()
+        return val.strip("'\"")
+    except (EOFError, KeyboardInterrupt):
+        print(f"\n{YELLOW}Setup cancelled.{RESET}")
+        sys.exit(0)
+
+
+ENV_FILENAMES = (
+    ".env.local",
+    ".env.azure",
+    ".env.jira",
+    ".env.github",
+    ".env.gitlab",
+    ".env",
+)
+
+
+def default_env_filename(cfg: WorkspaceConfig) -> str:
+    """Suggest the most descriptive local env filename for the workspace."""
+    if cfg.tracker_type == "azure-devops" or cfg.vcs_platform == "azure-repos":
+        return ".env.azure"
+    if cfg.tracker_type == "jira":
+        return ".env.jira"
+    if cfg.tracker_type == "gitlab" or cfg.vcs_platform == "gitlab":
+        return ".env.gitlab"
+    if cfg.tracker_type == "github" or cfg.vcs_platform == "github":
+        return ".env.github"
+    return ".env.local"
+
+
+def load_env_files(root: Path) -> dict[str, str]:
+    """Load key-value pairs from local .env* files into os.environ if not already set."""
+    loaded: dict[str, str] = {}
+    for filename in ENV_FILENAMES:
+        env_path = root / filename
+        if env_path.is_file():
+            try:
+                for line in env_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    if line.startswith("export "):
+                        line = line[len("export "):].strip()
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    if key:
+                        if key not in os.environ:
+                            os.environ[key] = val
+                        loaded[key] = val
+            except Exception:
+                pass
+    return loaded
+
+
+def write_env_vars(env_path: Path, updates: dict[str, str]) -> None:
+    """Create or update key=value entries in a local .env file and set os.environ."""
+    existing_lines: list[str] = []
+    if env_path.is_file():
+        try:
+            existing_lines = env_path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            existing_lines = []
+
+    remaining = dict(updates)
+    new_lines: list[str] = []
+    for line in existing_lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.split("=", 1)[0].strip()
+            if key.startswith("export "):
+                key = key[len("export "):].strip()
+            if key in remaining:
+                new_lines.append(f"{key}={remaining.pop(key)}")
+                continue
+        new_lines.append(line)
+
+    if not new_lines:
+        new_lines.append(f"# saiga-cart local credentials ({env_path.name})")
+    for key, val in remaining.items():
+        new_lines.append(f"{key}={val}")
+
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+    env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    try:
+        if os.name != "nt":
+            env_path.chmod(0o600)
+    except Exception:
+        pass
+    for key, val in updates.items():
+        os.environ[key] = val
+
+
+def normalize_ado_base_and_project(raw_url: str, fallback_org: str, fallback_project: str) -> tuple[str, str]:
+    """Normalize an Azure DevOps URL into (base_url, project_key) and strip browser suffixes."""
+    cleaned = raw_url.strip().rstrip("/")
+    if not cleaned:
+        return f"https://dev.azure.com/{fallback_org}/{fallback_project}", fallback_project
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", cleaned):
+        if "." not in cleaned and "/" not in cleaned:
+            return f"https://dev.azure.com/{cleaned}/{fallback_project}", fallback_project
+        cleaned = "https://" + cleaned.lstrip("/")
+
+    parsed = urllib.parse.urlsplit(cleaned)
+    host = parsed.netloc.lower()
+    segments = [urllib.parse.unquote(s) for s in parsed.path.split("/") if s]
+    # Strip trailing repo/board segments like _git, _boards, _workitems, _apis
+    filtered: list[str] = []
+    for seg in segments:
+        if seg.startswith("_"):
+            break
+        filtered.append(seg)
+
+    if host.endswith(".visualstudio.com"):
+        project = filtered[0] if filtered else fallback_project
+        base = f"{parsed.scheme}://{parsed.netloc}/{urllib.parse.quote(project)}"
+        return base, project
+
+    if host == "dev.azure.com" or "azure" in host:
+        org = filtered[0] if len(filtered) >= 1 else fallback_org
+        project = filtered[1] if len(filtered) >= 2 else fallback_project
+        base = f"{parsed.scheme}://{parsed.netloc}/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+        return base, project
+
+    project = filtered[-1] if filtered else fallback_project
+    return cleaned, project
+
+
+def verify_provider_auth(
+    provider: str,
+    cfg: WorkspaceConfig,
+    env: dict[str, str] | None = None,
+    timeout: int = 10,
+) -> tuple[bool, str]:
+    """Verify credentials against the configured remote tracker or VCS provider."""
+    lookup = dict(os.environ)
+    if env:
+        lookup.update(env)
+
+    if provider in ("azure-devops", "azure-repos"):
+        pat = lookup.get("AZURE_DEVOPS_EXT_PAT") or lookup.get("ADO_PAT") or ""
+        base_url, project = normalize_ado_base_and_project(
+            lookup.get("AZURE_DEVOPS_ORG_URL") or cfg.tracker_base_url,
+            cfg.org,
+            cfg.tracker_project_key or "project",
+        )
+        if pat:
+            parsed = urllib.parse.urlsplit(base_url)
+            segs = [s for s in parsed.path.split("/") if s and not s.startswith("_")]
+            if parsed.netloc.lower().endswith(".visualstudio.com"):
+                org_root = f"{parsed.scheme}://{parsed.netloc}"
+            elif segs:
+                org_root = f"{parsed.scheme}://{parsed.netloc}/{segs[0]}"
+            else:
+                org_root = base_url.rstrip("/")
+            api_url = f"{org_root}/_apis/projects?%24top=1&api-version=7.0"
+            b64 = base64.b64encode(f":{pat}".encode("utf-8")).decode("ascii")
+            req = urllib.request.Request(
+                api_url,
+                headers={"Authorization": f"Basic {b64}", "Accept": "application/json"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    if 200 <= resp.status < 300:
+                        return True, f"Verified Azure DevOps PAT against {org_root} (HTTP {resp.status})"
+            except urllib.error.HTTPError as err:
+                if err.code in (401, 403):
+                    return False, f"Azure DevOps rejected token (HTTP {err.code}). Ensure PAT is valid and has Work Items & Code Read/Write scopes."
+                if err.code == 404:
+                    return False, f"Azure DevOps organization/project not found at {org_root} (HTTP 404)."
+                return False, f"Azure DevOps API returned HTTP {err.code}: {err.reason}"
+            except Exception as err:
+                return False, f"Could not reach Azure DevOps ({org_root}): {err}"
+
+        if shutil.which("az"):
+            try:
+                res = subprocess.run(
+                    ["az", "account", "show"],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+                if res.returncode == 0:
+                    return True, "Verified Azure CLI session ('az account show' succeeded)"
+            except Exception:
+                pass
+        return False, "No valid AZURE_DEVOPS_EXT_PAT or active 'az' CLI login detected."
+
+    if provider == "jira":
+        token = lookup.get("JIRA_API_TOKEN") or ""
+        email = lookup.get("JIRA_USER_EMAIL") or ""
+        base_url = (lookup.get("JIRA_BASE_URL") or cfg.tracker_base_url).rstrip("/")
+        if not token or not email:
+            return False, "Missing JIRA_API_TOKEN or JIRA_USER_EMAIL."
+        api_url = f"{base_url}/rest/api/3/myself"
+        b64 = base64.b64encode(f"{email}:{token}".encode("utf-8")).decode("ascii")
+        req = urllib.request.Request(
+            api_url,
+            headers={"Authorization": f"Basic {b64}", "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if 200 <= resp.status < 300:
+                    return True, f"Verified Jira credentials against {base_url}"
+        except urllib.error.HTTPError as err:
+            return False, f"Jira authentication failed (HTTP {err.code}). Check email, API token, and base URL."
+        except Exception as err:
+            return False, f"Could not connect to Jira ({base_url}): {err}"
+
+    if provider == "github":
+        token = lookup.get("GITHUB_TOKEN") or lookup.get("GH_TOKEN") or ""
+        if token:
+            req = urllib.request.Request(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "saiga-cart-bootstrap",
+                },
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    if 200 <= resp.status < 300:
+                        return True, "Verified GITHUB_TOKEN against https://api.github.com/user"
+            except urllib.error.HTTPError as err:
+                return False, f"GitHub token rejected (HTTP {err.code}). Ensure PAT has 'repo' scope."
+            except Exception as err:
+                return False, f"Could not reach GitHub API: {err}"
+        if shutil.which("gh"):
+            try:
+                res = subprocess.run(
+                    ["gh", "auth", "status"],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+                if res.returncode == 0:
+                    return True, "Verified GitHub CLI session ('gh auth status' succeeded)"
+            except Exception:
+                pass
+        return False, "No valid GITHUB_TOKEN or active 'gh auth login' session found."
+
+    if provider == "gitlab":
+        token = lookup.get("GITLAB_TOKEN") or lookup.get("GITLAB_PAT") or ""
+        base_url = lookup.get("GITLAB_BASE_URL") or (
+            cfg.tracker_base_url if cfg.tracker_type == "gitlab" else "https://gitlab.com"
+        )
+        parsed = urllib.parse.urlsplit(base_url if "://" in base_url else f"https://{base_url}")
+        host_root = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else "https://gitlab.com"
+        if token:
+            req = urllib.request.Request(
+                f"{host_root}/api/v4/user",
+                headers={"PRIVATE-TOKEN": token, "Accept": "application/json"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    if 200 <= resp.status < 300:
+                        return True, f"Verified GITLAB_TOKEN against {host_root}"
+            except urllib.error.HTTPError as err:
+                return False, f"GitLab token rejected at {host_root} (HTTP {err.code}). Ensure token has 'api' scope."
+            except Exception as err:
+                return False, f"Could not reach GitLab API ({host_root}): {err}"
+        if shutil.which("glab"):
+            try:
+                res = subprocess.run(
+                    ["glab", "auth", "status"],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+                if res.returncode == 0:
+                    return True, "Verified GitLab CLI session ('glab auth status' succeeded)"
+            except Exception:
+                pass
+        return False, "No valid GITLAB_TOKEN or active 'glab auth login' session found."
+
+    return True, f"No API verification required for provider '{provider}'."
+
+
+def normalize_git_repo_url(raw_url: str) -> str:
+    """Clean and normalize user-entered Git URLs (browser suffixes, spaces, git clone prefixes)."""
+    cleaned = raw_url.strip().strip("'\"")
+    if cleaned.lower().startswith("git clone "):
+        cleaned = cleaned[len("git clone "):].strip()
+        # Strip leading CLI flags like `-b main` or `--depth 1` before the URL
+        tokens = cleaned.split()
+        for idx, tok in enumerate(tokens):
+            if tok.startswith(("http://", "https://", "git@", "ssh://")):
+                cleaned = " ".join(tokens[idx:])
+                break
+
+    if cleaned.startswith(("http://", "https://")):
+        parsed = urllib.parse.urlsplit(cleaned)
+        path = parsed.path
+        # Strip common web UI suffixes pasted from browser address bars
+        for marker in (
+            "/pullrequest",
+            "/commit/",
+            "/commits",
+            "/branches",
+            "/branchCompare",
+            "/-/tree/",
+            "/-/blob/",
+            "/-/merge_requests",
+            "/tree/",
+            "/blob/",
+            "/src/",
+        ):
+            if marker in path:
+                path = path.split(marker, 1)[0]
+        path = path.rstrip("/")
+        # Encode unescaped spaces in paths (common in Azure DevOps project/repo names)
+        normalized_path = urllib.parse.quote(urllib.parse.unquote(path), safe="/:@._-~")
+        return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, normalized_path, "", ""))
+
+    return cleaned
+
+
+def derive_repo_name_from_url(url: str) -> str:
+    """Extract a clean, safe directory slug from a Git URL or local path."""
+    cleaned = normalize_git_repo_url(url).rstrip("/\\")
+    if ":" in cleaned and not cleaned.startswith(("http://", "https://", "ssh://")):
+        cleaned = cleaned.split(":", 1)[1]
+    tail = re.split(r"[\\/]", cleaned)[-1]
+    tail = urllib.parse.unquote(tail)
+    if tail.endswith(".git"):
+        tail = tail[:-4]
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", tail).strip("-.")
+    return slug or "sibling-repo"
+
+
+def validate_sibling_name(name: str, existing: list[SiblingRepo], workspace_slug: str = "") -> tuple[bool, str]:
+    """Validate that a sibling repository folder name is safe and non-conflicting."""
+    cleaned = name.strip()
+    if not cleaned:
+        return False, "Repository directory name cannot be empty."
+    if cleaned in (".", "..") or "/" in cleaned or "\\" in cleaned or ".." in cleaned:
+        return False, "Repository name must be a single folder name without slashes or '..'."
+    if not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]*$", cleaned):
+        return False, "Repository name may only contain letters, numbers, '.', '_', and '-'."
+    if workspace_slug and cleaned.lower() == workspace_slug.lower():
+        return False, f"Sibling name '{cleaned}' conflicts with the workspace directory slug '{workspace_slug}'."
+    if any(s.name.lower() == cleaned.lower() for s in existing):
+        return False, f"A sibling repository named '{cleaned}' is already in the list."
+    return True, cleaned
+
+
+def _build_git_auth_args(url: str, env: dict[str, str]) -> list[str]:
+    """Build transient git `-c http.extraHeader=...` arguments so tokens never leak into saved URLs."""
+    if not url.startswith(("http://", "https://")):
+        return []
+    host = urllib.parse.urlsplit(url).netloc.lower()
+    if ("dev.azure.com" in host or host.endswith(".visualstudio.com")) and (
+        env.get("AZURE_DEVOPS_EXT_PAT") or env.get("ADO_PAT")
+    ):
+        pat = env.get("AZURE_DEVOPS_EXT_PAT") or env.get("ADO_PAT") or ""
+        b64 = base64.b64encode(f":{pat}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    if "github.com" in host and (env.get("GITHUB_TOKEN") or env.get("GH_TOKEN")):
+        tok = env.get("GITHUB_TOKEN") or env.get("GH_TOKEN") or ""
+        b64 = base64.b64encode(f"x-access-token:{tok}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    if "gitlab" in host and (env.get("GITLAB_TOKEN") or env.get("GITLAB_PAT")):
+        tok = env.get("GITLAB_TOKEN") or env.get("GITLAB_PAT") or ""
+        b64 = base64.b64encode(f"oauth2:{tok}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    return []
+
+
+def verify_git_repo_url(
+    url: str,
+    env: dict[str, str] | None = None,
+    timeout: int = 15,
+) -> tuple[bool, str]:
+    """Probe a Git repository URL immediately using `git ls-remote` without hanging on prompts."""
+    cleaned = normalize_git_repo_url(url)
+    if not cleaned:
+        return False, "Repository URL cannot be empty."
+    if shutil.which("git") is None:
+        return False, "git CLI is not installed or not in PATH."
+
+    lookup = dict(os.environ)
+    if env:
+        lookup.update(env)
+
+    run_env = dict(lookup)
+    run_env["GIT_TERMINAL_PROMPT"] = "0"
+    run_env["GCM_INTERACTIVE"] = "never"
+    if "GIT_SSH_COMMAND" not in run_env:
+        run_env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes -o ConnectTimeout=10"
+
+    auth_args = _build_git_auth_args(cleaned, lookup)
+    cmd = ["git", *auth_args, "ls-remote", "--heads", cleaned]
+    try:
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            env=run_env,
+            timeout=timeout,
+        )
+        if res.returncode == 0:
+            return True, f"Repository reachable ({cleaned})"
+        stderr = (res.stderr or res.stdout or "").strip()
+        # Scrub any authorization headers from error output just in case
+        stderr = re.sub(r"Authorization:\s*Basic\s+[A-Za-z0-9+/=]+", "Authorization: Basic ***", stderr)
+        first_line = stderr.splitlines()[-1] if stderr else f"git ls-remote exited with code {res.returncode}"
+        return False, first_line
+    except subprocess.TimeoutExpired:
+        return False, f"Timed out after {timeout}s while connecting to {cleaned}"
+    except Exception as err:
+        return False, f"Failed to run git ls-remote: {err}"
+
+
+def run_interactive_auth_setup(cfg: WorkspaceConfig, root: Path) -> None:
+    """Walk the user through configuring and testing tracker/VCS tokens interactively."""
+    load_env_files(root)
+    providers: list[str] = []
+    if cfg.tracker_type != "none":
+        providers.append(cfg.tracker_type)
+    if cfg.vcs_platform == "azure-repos" and "azure-devops" not in providers:
+        providers.append("azure-devops")
+    elif cfg.vcs_platform in ("github", "gitlab") and cfg.vcs_platform not in providers:
+        providers.append(cfg.vcs_platform)
+
+    if not providers:
+        return
+
+    print(f"\n{BLUE}{BOLD}--- Section 4b: Authentication & Live Connection Check ---{RESET}")
+    suggested_env = default_env_filename(cfg)
+    print(f"{DIM}Credentials can be saved in a git-ignored env file (e.g. {suggested_env} or .env.local)")
+    print(f"or managed in your local CLI / OS keyring (az devops login, gh auth login, glab auth login).{RESET}")
+
+    for provider in providers:
+        ok, msg = verify_provider_auth(provider, cfg)
+        if ok:
+            print(f"  {GREEN}✔{RESET} {msg}")
+            if not prompt_bool(f"Reconfigure {provider} credentials anyway?", False):
+                continue
+
+        while True:
+            storage_choices = [
+                ("env-file", f"Save token in local env file ({suggested_env} / .env.local)"),
+                ("keyring", "Use local CLI / OS keyring (I have logged in or will log in via CLI/keyring)"),
+                ("skip", "Skip authentication setup for now"),
+            ]
+            mode = prompt_choice(f"How would you like to configure {provider} authentication?", storage_choices, "env-file")
+            if mode == "skip":
+                print(f"  {YELLOW}⚠{RESET} Skipping {provider} credential verification for now.")
+                break
+
+            if mode == "env-file":
+                env_name = prompt_text("Local env file name", suggested_env)
+                if not env_name.startswith(".env"):
+                    env_name = f".env.{env_name.lstrip('.')}"
+                env_path = root / env_name
+                updates: dict[str, str] = {}
+
+                if provider == "azure-devops":
+                    print(f"  {DIM}Create PAT at: https://dev.azure.com/{cfg.org}/_usersSettings/tokens")
+                    print(f"  Required scopes: Work Items (Read & write) and Code (Read & write){RESET}")
+                    updates["AZURE_DEVOPS_ORG_URL"] = cfg.tracker_base_url
+                    pat = ""
+                    while not pat:
+                        pat = prompt_secret("Enter Azure DevOps PAT (AZURE_DEVOPS_EXT_PAT)")
+                        if not pat:
+                            print(f"  {YELLOW}Token cannot be empty.{RESET}")
+                    updates["AZURE_DEVOPS_EXT_PAT"] = pat
+                elif provider == "jira":
+                    print(f"  {DIM}Create API token at: https://id.atlassian.com/manage-profile/security/api-tokens{RESET}")
+                    updates["JIRA_BASE_URL"] = cfg.tracker_base_url
+                    email = ""
+                    while not email or "@" not in email:
+                        email = prompt_text("Jira Account Email (JIRA_USER_EMAIL)", os.environ.get("JIRA_USER_EMAIL", ""))
+                        if not email or "@" not in email:
+                            print(f"  {YELLOW}Please enter a valid email address.{RESET}")
+                    tok = ""
+                    while not tok:
+                        tok = prompt_secret("Enter Jira API Token (JIRA_API_TOKEN)")
+                        if not tok:
+                            print(f"  {YELLOW}Token cannot be empty.{RESET}")
+                    updates["JIRA_USER_EMAIL"] = email
+                    updates["JIRA_API_TOKEN"] = tok
+                elif provider == "github":
+                    print(f"  {DIM}Create PAT at: https://github.com/settings/tokens (scope: repo){RESET}")
+                    tok = ""
+                    while not tok:
+                        tok = prompt_secret("Enter GitHub PAT (GITHUB_TOKEN)")
+                        if not tok:
+                            print(f"  {YELLOW}Token cannot be empty.{RESET}")
+                    updates["GITHUB_TOKEN"] = tok
+                elif provider == "gitlab":
+                    gl_url = cfg.tracker_base_url if cfg.tracker_type == "gitlab" else "https://gitlab.com"
+                    print(f"  {DIM}Create PAT at: {gl_url.rstrip('/')}/-/user_settings/personal_access_tokens (scope: api){RESET}")
+                    updates["GITLAB_BASE_URL"] = gl_url
+                    tok = ""
+                    while not tok:
+                        tok = prompt_secret("Enter GitLab PAT (GITLAB_TOKEN)")
+                        if not tok:
+                            print(f"  {YELLOW}Token cannot be empty.{RESET}")
+                    updates["GITLAB_TOKEN"] = tok
+
+                write_env_vars(env_path, updates)
+                print(f"  {GREEN}✔{RESET} Saved credentials to {CYAN}{env_name}{RESET} (git-ignored)")
+            else:
+                if provider == "azure-devops":
+                    print(f"  {CYAN}ℹ{RESET} Run {BOLD}az login{RESET} or {BOLD}az devops login{RESET} (and configure Git Credential Manager) in another terminal.")
+                elif provider == "github":
+                    print(f"  {CYAN}ℹ{RESET} Run {BOLD}gh auth login{RESET} in another terminal.")
+                elif provider == "gitlab":
+                    print(f"  {CYAN}ℹ{RESET} Run {BOLD}glab auth login{RESET} in another terminal.")
+                else:
+                    print(f"  {CYAN}ℹ{RESET} Ensure {BOLD}JIRA_USER_EMAIL{RESET} and {BOLD}JIRA_API_TOKEN{RESET} are exported in your shell environment.")
+                _ = prompt_text("Press Enter once ready to test connection", "")
+
+            ok, msg = verify_provider_auth(provider, cfg)
+            if ok:
+                print(f"  {GREEN}✔{RESET} {msg}")
+                break
+            print(f"  {YELLOW}✖ Authentication check failed:{RESET} {msg}")
+            if not prompt_bool("Try configuring credentials again?", True):
+                print(f"  {YELLOW}⚠{RESET} Continuing without verified {provider} credentials.")
+                break
+
+
+def prompt_and_verify_siblings(cfg: WorkspaceConfig) -> list[SiblingRepo]:
+    """Interactively prompt for sibling repositories and strictly verify each URL via git ls-remote."""
+    siblings: list[SiblingRepo] = list(cfg.siblings)
+    print(f"{DIM}Each sibling repository URL will be tested immediately with 'git ls-remote'.")
+    print(f"Leave the Repository Git URL blank when you are finished adding repositories.{RESET}")
+
+    while True:
+        if siblings:
+            print(f"\n  {CYAN}Configured sibling repositories ({len(siblings)}):{RESET}")
+            for idx, sib in enumerate(siblings, 1):
+                print(f"    {idx}. {BOLD}{sib.name}{RESET} ({sib.url}) [{sib.access}]")
+            if not prompt_bool("Add another sibling repository?", False):
+                break
+        else:
+            if not prompt_bool("Add a sibling repository to this workspace?", True):
+                break
+
+        # URL entry & strict verification loop
+        verified_url = ""
+        while True:
+            if cfg.vcs_platform == "azure-repos":
+                example_url = f"https://dev.azure.com/{cfg.org}/{cfg.tracker_project_key}/_git/my-service"
+            elif cfg.vcs_platform == "gitlab":
+                example_url = f"https://gitlab.com/{cfg.org}/my-service.git"
+            else:
+                example_url = f"https://github.com/{cfg.org}/my-service.git"
+
+            raw_url = prompt_text(f"Sibling Repository Git URL (e.g. {example_url}; blank to skip)", "")
+            if not raw_url:
+                break
+
+            candidate_url = normalize_git_repo_url(raw_url)
+            if any(s.url.lower() == candidate_url.lower() for s in siblings):
+                print(f"  {YELLOW}✖ Duplicate URL:{RESET} '{candidate_url}' is already in the sibling list.")
+                continue
+
+            print(f"  {DIM}Testing repository access: {candidate_url} ...{RESET}")
+            ok, msg = verify_git_repo_url(candidate_url)
+            if ok:
+                print(f"  {GREEN}✔{RESET} {msg}")
+                verified_url = candidate_url
+                break
+
+            print(f"  {YELLOW}✖ Repository URL check failed:{RESET} {msg}")
+            print(f"  {DIM}Please verify the URL, repository permissions, or SSH/PAT credentials and try again (or leave blank to skip).{RESET}")
+
+        if not verified_url:
+            continue
+
+        # Name entry & validation loop
+        suggested_name = derive_repo_name_from_url(verified_url)
+        repo_name = ""
+        while True:
+            raw_name = prompt_text("Local folder name (checked out beside workspace)", suggested_name)
+            valid_name, name_or_err = validate_sibling_name(raw_name, siblings, cfg.slug)
+            if valid_name:
+                repo_name = name_or_err
+                break
+            print(f"  {YELLOW}✖ Invalid name:{RESET} {name_or_err}")
+
+        role = prompt_text("Repository role / responsibility summary", f"Service repository ({repo_name})")
+        access_choices = [
+            ("active", "Active development (agents can read and edit code)"),
+            ("read-only", "Read-only reference (agents can inspect contracts/schemas only)"),
+        ]
+        access = prompt_choice("Agent Access Mode", access_choices, "active")
+        siblings.append(SiblingRepo(name=repo_name, url=verified_url, role=role, access=access))
+        print(f"  {GREEN}✔{RESET} Added sibling repository {BOLD}{repo_name}{RESET}")
+
+    return siblings
+
+
+def run_interactive_wizard(root: Path | None = None) -> WorkspaceConfig:
+    target_root = (root or Path.cwd()).resolve()
     cfg = WorkspaceConfig()
     
     print(f"\n{BLUE}{BOLD}--- Section 1: Workspace Identity ---{RESET}")
@@ -176,16 +786,19 @@ def run_interactive_wizard() -> WorkspaceConfig:
     if cfg.tracker_type == "jira":
         cfg.tracker_base_url = prompt_text("Jira Base URL", "https://company.atlassian.net")
         cfg.tracker_project_key = prompt_text("Jira Project Key", "PROJ")
-        print(f"  {DIM}ℹ Note: Jira Cloud integration uses JIRA_API_TOKEN (scopes: read:jira-work, write:jira-work) configured in .env.local{RESET}")
+        print(f"  {DIM}ℹ Note: Jira Cloud integration uses JIRA_API_TOKEN (scopes: read:jira-work, write:jira-work) configured in .env.jira / .env.local{RESET}")
     elif cfg.tracker_type == "github":
         cfg.tracker_base_url = prompt_text("GitHub Repository / Project URL", f"https://github.com/{cfg.org}/main-repo")
-        print(f"  {DIM}ℹ Note: GitHub integration uses GITHUB_TOKEN (scope: repo) or 'gh auth login'{RESET}")
+        print(f"  {DIM}ℹ Note: GitHub integration uses GITHUB_TOKEN (scope: repo) in .env.github / .env.local or 'gh auth login'{RESET}")
     elif cfg.tracker_type == "gitlab":
         cfg.tracker_base_url = prompt_text("GitLab Group / Project URL", f"https://gitlab.com/{cfg.org}/main-repo")
-        print(f"  {DIM}ℹ Note: GitLab integration uses GITLAB_TOKEN (scope: api) or 'glab auth login'{RESET}")
+        print(f"  {DIM}ℹ Note: GitLab integration uses GITLAB_TOKEN (scope: api) in .env.gitlab / .env.local or 'glab auth login'{RESET}")
     elif cfg.tracker_type == "azure-devops":
-        cfg.tracker_base_url = prompt_text("Azure DevOps Project URL", f"https://dev.azure.com/{cfg.org}/project")
-        print(f"  {DIM}ℹ Note: Azure DevOps integration uses AZURE_DEVOPS_EXT_PAT (Work Items & Code Read/Write) or 'az devops login'{RESET}")
+        raw_ado_url = prompt_text("Azure DevOps Organization or Project URL", f"https://dev.azure.com/{cfg.org}/project")
+        norm_base, inferred_proj = normalize_ado_base_and_project(raw_ado_url, cfg.org, "project")
+        cfg.tracker_project_key = prompt_text("Azure DevOps Project Name / Key", inferred_proj)
+        cfg.tracker_base_url, _ = normalize_ado_base_and_project(norm_base, cfg.org, cfg.tracker_project_key)
+        print(f"  {DIM}ℹ Note: Azure DevOps integration uses AZURE_DEVOPS_EXT_PAT (Work Items & Code Read/Write) in .env.azure / .env.local or 'az devops login'{RESET}")
 
     print(f"\n{BLUE}{BOLD}--- Section 4: Version Control & Code Reviews ---{RESET}")
     vcs_choices = [
@@ -194,27 +807,21 @@ def run_interactive_wizard() -> WorkspaceConfig:
         ("azure-repos", "Azure Repos"),
         ("bitbucket", "Bitbucket"),
     ]
-    cfg.vcs_platform = prompt_choice("Version Control Platform", vcs_choices, "github" if cfg.tracker_type == "github" else "gitlab")
+    default_vcs = (
+        "azure-repos"
+        if cfg.tracker_type == "azure-devops"
+        else ("github" if cfg.tracker_type == "github" else "gitlab")
+    )
+    cfg.vcs_platform = prompt_choice("Version Control Platform", vcs_choices, default_vcs)
     cfg.consensus_review_enabled = prompt_bool("Enable Multi-Model Consensus Review Gate (consensus-check)?", True)
-    cfg.dod_gate_enabled = prompt_bool("Enable Definition-of-Done Pre-Flight Check (pr-readiness-check)?", True)
+    cfg.dod_gate_enabled = prompt_bool("Enable Definition-of-Done Pre-Flight Gate in pr-create?", True)
+
+    # Walk through token setup and live authentication verification before adding sibling repos
+    run_interactive_auth_setup(cfg, target_root)
 
     print(f"\n{BLUE}{BOLD}--- Section 5: Multi-Repo Sibling Repositories ---{RESET}")
     print(f"{DIM}Define sibling repositories to include in this unified multi-root workspace.{RESET}")
-    
-    add_sample = prompt_bool("Add example sibling repositories to start?", True)
-    if add_sample:
-        cfg.siblings.append(SiblingRepo(
-            name="core-service",
-            url=f"git@{cfg.vcs_platform}.com:{cfg.org}/core-service.git",
-            role="Core backend microservice and API",
-            access="active"
-        ))
-        cfg.siblings.append(SiblingRepo(
-            name="infra-platform",
-            url=f"git@{cfg.vcs_platform}.com:{cfg.org}/infra-platform.git",
-            role="Terraform infrastructure, Helm charts, and CI pipelines",
-            access="active"
-        ))
+    cfg.siblings = prompt_and_verify_siblings(cfg)
 
     print(f"\n{BLUE}{BOLD}--- Section 6: AI Agent Directives ---{RESET}")
     cfg.copilot = prompt_bool("Generate GitHub Copilot instructions (.github/copilot-instructions.md)?", True)
@@ -654,14 +1261,69 @@ def clone_siblings_script() -> str:
 
 from __future__ import annotations
 
+import base64
 import json
+import os
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
+
+
+ENV_FILENAMES = (
+    ".env.local",
+    ".env.azure",
+    ".env.jira",
+    ".env.github",
+    ".env.gitlab",
+    ".env",
+)
+
+
+def load_env_files(root: Path) -> None:
+    for filename in ENV_FILENAMES:
+        env_path = root / filename
+        if env_path.is_file():
+            try:
+                for line in env_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    if line.startswith("export "):
+                        line = line[len("export "):].strip()
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\\"")
+                    if key and key not in os.environ:
+                        os.environ[key] = val
+            except Exception:
+                pass
+
+
+def build_git_auth_args(url: str) -> list[str]:
+    if not url.startswith(("http://", "https://")):
+        return []
+    host = urllib.parse.urlsplit(url).netloc.lower()
+    if ("dev.azure.com" in host or host.endswith(".visualstudio.com")) and (
+        os.environ.get("AZURE_DEVOPS_EXT_PAT") or os.environ.get("ADO_PAT")
+    ):
+        pat = os.environ.get("AZURE_DEVOPS_EXT_PAT") or os.environ.get("ADO_PAT") or ""
+        b64 = base64.b64encode(f":{pat}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    if "github.com" in host and (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")):
+        tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+        b64 = base64.b64encode(f"x-access-token:{tok}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    if "gitlab" in host and (os.environ.get("GITLAB_TOKEN") or os.environ.get("GITLAB_PAT")):
+        tok = os.environ.get("GITLAB_TOKEN") or os.environ.get("GITLAB_PAT") or ""
+        b64 = base64.b64encode(f"oauth2:{tok}".encode("utf-8")).decode("ascii")
+        return ["-c", f"http.extraHeader=Authorization: Basic {b64}"]
+    return []
 
 
 def main() -> int:
     workspace = Path(__file__).resolve().parents[1]
+    load_env_files(workspace)
     manifest = Path(__file__).with_name("siblings.json")
     siblings = json.loads(manifest.read_text(encoding="utf-8"))
     for sibling in siblings:
@@ -670,9 +1332,11 @@ def main() -> int:
             print(f"OK {sibling['name']} already exists at {destination}; skipping")
             continue
         print(f"Cloning {sibling['name']} into {destination}")
+        auth_args = build_git_auth_args(sibling["url"])
+        cmd = ["git", "clone", *auth_args, sibling["url"], str(destination)]
         try:
             subprocess.run(
-                ["git", "clone", sibling["url"], str(destination)],
+                cmd,
                 check=True,
             )
         except subprocess.CalledProcessError as error:
@@ -835,6 +1499,68 @@ def print_token_setup_instructions(cfg: WorkspaceConfig) -> None:
         print(f"    - Set in .env.local: {CYAN}GITHUB_TOKEN{RESET}, or authenticate CLI: {CYAN}gh auth login{RESET}")
 
 
+def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> str:
+    """Render a tailored onboarding primer and first-steps guide after bootstrapping."""
+    cadence_map = {
+        "safe": ("Program Increment (PI 01)", "Goals -> Epics -> Stories"),
+        "scrum": ("Sprint 01", "Epics -> Stories"),
+        "shape-up": ("Cycle 01", "Pitches -> Scopes"),
+        "kanban": ("Milestone 01", "Epics -> Tasks"),
+    }
+    cadence_label, hierarchy_label = cadence_map.get(
+        cfg.planning_framework, ("Sprint 01", "Epics -> Stories")
+    )
+
+    onboard_skill_map = {
+        "azure-devops": "ado-work-item-onboard",
+        "jira": "jira-story-onboard",
+        "github": "github-issue-onboard",
+        "gitlab": "gitlab-issue-onboard",
+    }
+    onboard_skill = onboard_skill_map.get(cfg.tracker_type)
+
+    sibling_names = [s.name for s in cfg.siblings]
+    sibling_hint = (
+        f"across {', '.join(sibling_names)}"
+        if sibling_names
+        else "across your configured repositories"
+    )
+
+    lines = [
+        f"\n{CYAN}{BOLD}==================================================================={RESET}",
+        f"{MAGENTA}{BOLD}  🚀 Quick Primer: Getting Full Advantage of {cfg.name}{RESET}",
+        f"{CYAN}{BOLD}==================================================================={RESET}",
+        f"  {BOLD}1. Verify & Open Your Unified Workspace:{RESET}",
+        f"     • Clone sibling repos : {CYAN}{py_cmd} scripts/clone_siblings.py{RESET}",
+        f"     • Health diagnostics  : {CYAN}{py_cmd} scripts/workspace_doctor.py{RESET}",
+        f"     • Add repos anytime   : {CYAN}{py_cmd} bootstrap.py --add-sibling{RESET}",
+        f"     • Open multi-root IDE : {CYAN}code {cfg.slug}.code-workspace{RESET}",
+        "",
+        f"  {BOLD}2. How the Two-Mode AI Workflow Operates (AGENTS.md):{RESET}",
+        f"     • {GREEN}Plan Mode (Durable Context){RESET}: Never leave decisions trapped in chat.",
+        f"       Author plans in {CYAN}docs/planning/01/{RESET} ({cadence_label}: {hierarchy_label})",
+        f"       and record binding architecture choices in {CYAN}docs/adr/{RESET}.",
+        f"     • {GREEN}Agent Mode (Execution){RESET}: Only execute items whose {BOLD}Definition of Ready{RESET}",
+        f"       is {BOLD}Done{RESET} and Effort is {BOLD}Small/Medium{RESET}. Keep {CYAN}docs/architecture.md{RESET} and",
+        f"       {CYAN}GLOSSARY.md{RESET} updated as system contracts evolve.",
+        "",
+        f"  {BOLD}3. Try These First Prompts in Your AI Assistant (Copilot / Claude / Cursor):{RESET}",
+        f"     • {CYAN}\"Use planning-scaffold to create our first epic and story in docs/planning/01/\"{RESET}",
+        f"     • {CYAN}\"Run story-refiner on docs/planning/01/ to check Definition of Ready and sizing\"{RESET}",
+    ]
+    if onboard_skill:
+        lines.append(
+            f"     • {CYAN}\"Use {onboard_skill} to sync the ready story to {cfg.tracker_type} with bidirectional links\"{RESET}"
+        )
+    lines.extend([
+        f"     • {CYAN}\"Inspect the contracts {sibling_hint} and update docs/architecture.md\"{RESET}",
+        f"     • {CYAN}\"Run consensus-check before we finalize this cross-repo API change\"{RESET}",
+        f"     • {CYAN}\"Use pr-create to run DoD + consensus checks and open our PR/MR\"{RESET}",
+        f"{CYAN}{BOLD}==================================================================={RESET}\n",
+    ])
+    return "\n".join(lines)
+
+
 def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     print(f"\n{GREEN}{BOLD}Scaffolding workspace in: {root}{RESET}")
     
@@ -890,6 +1616,7 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
             print(f"  ✔ Created {dest_name}")
 
     render_file("AGENTS.md.template", "AGENTS.md")
+    render_file("GLOSSARY.md.template", "GLOSSARY.md")
     render_file("workspace.code-workspace.template", f"{cfg.slug}.code-workspace")
     (root / "workspace.yaml").write_text(render_workspace_config(cfg), encoding="utf-8")
     print("  Created workspace.yaml")
@@ -959,13 +1686,67 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
             if p.exists():
                 shutil.rmtree(p)
 
+        # Keep .github/skills/README.md and AGENTS.md skill routing synchronized with retained skills
+        active_skill_names = {
+            entry.name
+            for entry in skills_dir.iterdir()
+            if entry.is_dir() and not entry.name.startswith(".")
+        }
+        skills_readme = skills_dir / "README.md"
+        if skills_readme.is_file():
+            filtered_lines = []
+            for line in skills_readme.read_text(encoding="utf-8").splitlines():
+                m_skill = re.search(r"\[([A-Za-z0-9_.-]+)\]\(\1/SKILL\.md\)", line)
+                if m_skill and m_skill.group(1) not in active_skill_names:
+                    continue
+                filtered_lines.append(line)
+            skills_readme.write_text("\n".join(filtered_lines) + "\n", encoding="utf-8")
+
+        # Update .github/skills/harness2/profiles.json with workspace slug and active siblings
+        profiles_path = skills_dir / "harness2" / "profiles.json"
+        if profiles_path.is_file():
+            try:
+                profiles_data = json.loads(profiles_path.read_text(encoding="utf-8"))
+                repos_map = profiles_data.setdefault("repositories", {})
+                default_spec = repos_map.get("saiga-cart") or {
+                    "domain": "Workspace planning, skills, and governance",
+                    "default_verifier": "python3 .github/skills/harness2/scripts/validate_harness.py && python3 .github/skills/planning-docs-audit/scripts/planning_docs_audit.py",
+                    "verifier_paths": [
+                        ".github/skills/harness2/scripts/validate_harness.py",
+                        ".github/skills/planning-docs-audit/scripts/planning_docs_audit.py",
+                    ],
+                    "inv_levers": [
+                        "Verify AGENTS.md budget, skill frontmatter, and README index parity.",
+                        "Verify story metadata, Status vocabulary, and progress.md links.",
+                    ],
+                    "dom_levers": [
+                        "Keep deterministic checks in stdlib-only Python scripts with unittest coverage.",
+                        "Keep instructions concise and aligned with ASD-STE100 plain-language rules.",
+                    ],
+                }
+                repos_map[cfg.slug] = default_spec
+                for s in cfg.siblings:
+                    if s.access != "read-only" and s.name not in repos_map:
+                        repos_map[s.name] = {
+                            "domain": s.role or f"Sibling repository {s.name}",
+                            "default_verifier": "git status -sb",
+                            "verifier_paths": ["README.md"],
+                            "inv_levers": [
+                                f"Preserve cross-repository contracts with {cfg.slug}.",
+                                "Verify API/schema backward compatibility and error handling.",
+                            ],
+                            "dom_levers": [
+                                f"Follow idiomatic module boundaries and existing test patterns in {s.name}.",
+                                "Run targeted unit tests before proposing cross-repo changes.",
+                            ],
+                        }
+                profiles_path.write_text(json.dumps(profiles_data, indent=2) + "\n", encoding="utf-8")
+            except Exception:
+                pass
+
     print(f"\n{GREEN}{BOLD}🎉 Workspace successfully bootstrapped!{RESET}")
     print_token_setup_instructions(cfg)
-    print(f"\n{BOLD}Next steps:{RESET}")
-    print(f"  1. Set up local credentials: {CYAN}cp .env.example .env.local{RESET} and populate required token(s).")
-    print(f"  2. Run {CYAN}{Path(sys.executable).name} scripts/clone_siblings.py{RESET} to checkout sibling repos.")
-    print(f"  3. Open the multi-root workspace: {CYAN}code {cfg.slug}.code-workspace{RESET}")
-    print(f"  4. Run diagnostics: {CYAN}{Path(sys.executable).name} scripts/workspace_doctor.py{RESET}\n")
+    print(render_onboarding_primer(cfg, Path(sys.executable).name))
 
 
 def prepare_output_directory(source: Path, target: Path) -> Path:
@@ -994,6 +1775,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=Path.cwd(), help="Target directory")
     parser.add_argument("--non-interactive", action="store_true", help="Run without prompts using defaults/presets")
     parser.add_argument(
+        "--add-sibling",
+        action="store_true",
+        help="Interactively add and verify sibling repositories on an existing workspace.yaml",
+    )
+    parser.add_argument(
         "--preset",
         choices=["github-scrum", "jira-safe", "ado-scrum", "azure-devops"],
         help="Preset configuration",
@@ -1005,7 +1791,35 @@ def main() -> None:
     args = parse_args()
     print_banner()
 
+    target_dir = args.output.resolve()
+
+    if args.add_sibling:
+        ws_path = args.config.resolve() if args.config else (target_dir / "workspace.yaml")
+        if not ws_path.is_file():
+            print(f"{YELLOW}ERROR: Cannot find workspace.yaml at {ws_path}. Run bootstrap.py first.{RESET}", file=sys.stderr)
+            raise SystemExit(2)
+        try:
+            cfg = load_workspace_config(ws_path)
+        except (ValueError, FileNotFoundError) as error:
+            print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
+        load_env_files(ws_path.parent)
+        run_interactive_auth_setup(cfg, ws_path.parent)
+        print(f"\n{BLUE}{BOLD}--- Add Sibling Repositories ---{RESET}")
+        cfg.siblings = prompt_and_verify_siblings(cfg)
+        generate_workspace(cfg, ws_path.parent)
+        if cfg.siblings and sys.stdin.isatty() and prompt_bool("Clone newly configured sibling repositories now?", True):
+            subprocess.run([sys.executable, str(ws_path.parent / "scripts" / "clone_siblings.py")], check=False)
+        return
+
+    try:
+        output = prepare_output_directory(Path(__file__).resolve().parent, target_dir)
+    except ValueError as error:
+        print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+        raise SystemExit(2)
+
     cfg: WorkspaceConfig
+    is_interactive = False
     if args.config:
         config_path = args.config.resolve()
         try:
@@ -1043,15 +1857,14 @@ def main() -> None:
             vcs_platform="azure-repos",
         )
     else:
-        cfg = run_interactive_wizard()
-
-    try:
-        output = prepare_output_directory(Path(__file__).resolve().parent, args.output)
-    except ValueError as error:
-        print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
-        raise SystemExit(2)
+        is_interactive = True
+        cfg = run_interactive_wizard(output)
 
     generate_workspace(cfg, output)
+
+    if is_interactive and cfg.siblings and sys.stdin.isatty():
+        if prompt_bool("Clone configured sibling repositories now?", True):
+            subprocess.run([sys.executable, str(output / "scripts" / "clone_siblings.py")], check=False)
 
 
 if __name__ == "__main__":

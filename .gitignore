@@ -4,8 +4,6 @@ __pycache__/
 
 # Local environment variables & secrets
 .env
-.env.local
-.env.*.local
-*.local
+.env.*
 !.env.example
 

@@ -2,7 +2,7 @@
 
 Rolls up the epics delivering this goal. Update as epics land.
 
-Status legend: Not started | In progress | Blocked | Done
+Status legend: Not started | In progress | In review | Blocked | Done
 
 ## Epics
 

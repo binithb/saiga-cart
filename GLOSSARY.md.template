@@ -1,0 +1,14 @@
+# Domain & Workspace Glossary — {{WORKSPACE_NAME|default("AI Workspace")}}
+
+Canonical terminology for this workspace. Follow **ASD-STE100 plain-language rules** in all planning artifacts, story files, ADRs, and PR/MR descriptions, and use the exact terms defined here rather than synonyms.
+
+| Term | Definition | Avoid / Synonyms |
+|---|---|---|
+| **Workspace Root** | This meta-repository hosting `AGENTS.md`, `docs/planning/`, `docs/architecture.md`, `docs/adr/`, and `.github/skills/`. | "Parent repo", "Umbrella repo" |
+| **Sibling Repository** | An engineering repository checked out alongside the Workspace Root (`../<repo-name>`) and declared in `workspace.yaml` / `scripts/siblings.json`. | "Child repo", "Submodule" |
+| **Timebox** | A bounded delivery increment under `docs/planning/<NN>/` (Program Increment in SAFe, Sprint in Scrum, Cycle in Shape Up, or Milestone in Kanban). | "Folder", "Iteration" (unless Scrum-specific) |
+| **Story** | An independently executable unit of delivery (`stories/*.md`, `tasks/*.md`, or `scopes/*.md`) sized `Small` or `Medium` with `Definition of Ready = Done`. | "Sub-ticket", "Work item" (unless ADO-specific) |
+| **Definition of Ready (DoR)** | Pre-implementation gate (`Draft`, `Pending Clarification`, `Done`) verified by `story-refiner` (`story_readiness.py`). | "Ready state", "Refinement status" |
+| **Red Zone** | Governance and contract files (`AGENTS.md`, `docs/workflow.md`, `docs/architecture.md`, `docs/adr/**`, CI workflows) requiring explicit human review before mutation. | — |
+| **Green Zone** | Operational skills, deterministic scripts, and the experience ledger (`.github/skills/**`, `scripts/**`, `docs/ai/experience.md`). | — |
+| **Experience Ledger** | The cross-sprint memory table in `docs/ai/experience.md` managed via `manage_experience.py` (`EXP-NNNN`). | "Lessons learned doc" |

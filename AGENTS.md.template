@@ -7,7 +7,7 @@ This workspace has **two purposes**, and this file governs both:
 
 Read this file before making any changes.
 
-Also read `docs/architecture.md` (cross-repo component boundaries), `docs/workflow.md` (conventions & DoR/DoD), and `docs/planning/README.md` (active cycles/increments) before planning or suggesting architectural changes.
+Also read `docs/architecture.md` (cross-repo component boundaries), `docs/workflow.md` (conventions & DoR/DoD), `GLOSSARY.md` (canonical terms), and `docs/planning/README.md` (active cycles/increments) before planning or suggesting architectural changes.
 
 ---
 
@@ -15,11 +15,14 @@ Also read `docs/architecture.md` (cross-repo component boundaries), `docs/workfl
 
 Use this order when workspace documents overlap:
 
-1. `AGENTS.md` routes work and defines workspace-wide safety and ownership boundaries.
-2. `docs/workflow.md` is the canonical source for cross-cutting process rules, story sizing, and DoR/DoD gates.
+1. `AGENTS.md` routes work, enforces the always-on context budget (`<= 14,000` chars), and defines workspace-wide safety and ownership boundaries.
+2. `docs/workflow.md` is the canonical source for cross-cutting process rules, story sizing, ASD-STE100 writing standards, and DoR/DoD gates.
 3. `docs/architecture.md` is the canonical summary of current cross-repository state.
 4. Accepted ADRs (`docs/adr/`) record binding architectural decisions; newer superseding ADRs win.
-5. The [skill index](.github/skills/README.md) routes specialized tasks to task-specific `SKILL.md` procedures.
+5. The [skill index](.github/skills/README.md) routes specialized tasks to on-demand `SKILL.md` procedures:
+   - Planning & delivery: `planning-scaffold`, `story-refiner`, `planning-docs-audit`
+   - Quality, review & Harness² evolution: `consensus-check`, `harness2`, `pr-create`, `pr-reviewer`
+   - Issue tracker onboarding & status sync: `jira-story-onboard`, `jira-status-sync`, `github-issue-onboard`, `github-status-sync`, `gitlab-issue-onboard`, `ado-work-item-onboard`
 6. Planning files (timebox READMEs, goal/epic plans, and story files) define scope and acceptance criteria for specific work items.
 
 ---
@@ -32,19 +35,21 @@ Use this order when workspace documents overlap:
 
 ## Plan Mode / Agent Mode Discipline (Always Apply)
 
-- **Plan Mode:** Before ending a planning session, write/update the relevant `plan.md` and `progress.md` files under `docs/planning/`. Never leave plans only in chat or session memory.
+- **Plan Mode:** Before ending a planning session, write/update the relevant `plan.md` and `progress.md` files under `docs/planning/` and validate with `python3 .github/skills/planning-docs-audit/scripts/planning_docs_audit.py --fail-on-warning`. Never leave plans only in chat or session memory.
+- **Plain-Language & Outcome-Focused Writing (ASD-STE100):** Write all plans, stories, ADRs, and PR/MR descriptions in clear, active-voice sentences using canonical terms from `GLOSSARY.md`. Keep Acceptance Criteria outcome-focused; place file-level steps and verification commands in `## Implementation Steps & Checkpoints`.
 - **Agent Mode:** After implementing and verifying a step, use targeted test or build commands as verification evidence. Keep PR/MR descriptions high-level and functional without pasting terminal output or prompt transcripts.
 - **Definition of Ready (DoR):** Only pick up a story whose `Definition of Ready` is `Done` and whose `Effort` is `Small` or `Medium`. If a story is `Large` or incomplete, run `story-refiner` to decompose or refine it first.
+- **Status Lifecycle:** Allowed story and `progress.md` statuses are `Not started`, `In progress`, `In review`, `Blocked`, and `Done`.
 - **Stories are Independent by Default:** Most stories have no prerequisites and can be worked on in parallel. Only stories carrying an explicit `Depends on` link must wait.
-- **Architecture Reality:** If a merged change alters system architecture or directory contracts, update `docs/architecture.md` in the same PR/MR.
-- **ADR Discipline:** If a plan commits to a non-obvious or hard-to-reverse choice, write a companion ADR under `docs/adr/`.
-- **Issue Tracker Bidirectional Linking:** When onboarding a story into the issue tracker, link both ways: ticket points to repo permalink, and story file points to ticket key.
+- **Issue Tracker Bidirectional Linking & Confirmation Gate:** Never create or mutate remote tracker tickets, remote links, worklogs, or PR/MR comments without explicit user approval via `ask_user` (and `--confirm` where supported). When onboarding a story, strip any leading numeric prefix (`01-`), append `-<KEY>.md` via `git mv`, and link both ways.
+- **Architecture & ADR Reality:** If a merged change alters system architecture or directory contracts, update `docs/architecture.md` in the same PR/MR. Record non-obvious or hard-to-reverse choices as an ADR under `docs/adr/`.
 
 ---
 
-## Engineering & Execution Heuristics
+## Engineering & Execution Heuristics (Zen of Python Inspired)
 
+- **Explicit & Simple over Clever:** Prefer explicit, readable control flow over implicit magic or speculative abstractions. If an implementation is hard to explain, simplify it.
 - **Micro-Surgical Discipline:** Touch only what the task requires; do not refactor or restyle adjacent code. Clean up any temporary files or orphans introduced by your change.
-- **Simplicity First:** Ship the simplest complete solution; avoid speculative abstractions or unused parameters.
-- **Confused-State Gating:** If requirements, configurations, or target states are ambiguous, stop and ask the user for clarification before editing.
-- **Multi-Model Consensus Review:** For high-blast-radius changes (database migrations, security, public API breaking changes), invoke `consensus-check` before proceeding.
+- **Confused-State Gating:** In the face of ambiguity, refuse the temptation to guess—stop and ask the user via `ask_user` before editing.
+- **Risk-Scaled Review & Harness² Evolution:** Use `pr-create` (which runs readiness checks and Stage 2 `consensus-check`) before opening PRs/MRs, `pr-reviewer` for interactive review walkthroughs, and `harness2` (`python3 .github/skills/harness2/scripts/validate_harness.py`) to audit context budgets, distill recurring lessons into `docs/ai/experience.md` or scripts, and run exception-triggered `INV`/`DOM` task probes.
+

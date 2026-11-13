@@ -3,7 +3,7 @@
 Tracks status against [plan.md](plan.md); each box links its story file.
 Stories map 1:1 to {{TRACKER_NAME|default("Issue")}} Stories.
 
-Status legend: Not started | In progress | Blocked | Done
+Status legend: Not started | In progress | In review | Blocked | Done
 
 ## Stories
 - [ ] [Story title](stories/story-template.md)

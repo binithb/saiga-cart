@@ -159,6 +159,177 @@ class TestBootstrapUnit(unittest.TestCase):
         self.assertIn("repo", content)
         self.assertIn("gh auth login", content)
 
+    def test_normalize_ado_base_and_project_handles_browser_urls_and_spaces(self) -> None:
+        base, proj = bootstrap.normalize_ado_base_and_project(
+            "https://dev.azure.com/my-org/My%20Project/_git/my-repo",
+            "fallback-org",
+            "fallback-proj",
+        )
+        self.assertEqual(proj, "My Project")
+        self.assertEqual(base, "https://dev.azure.com/my-org/My%20Project")
+
+        vs_base, vs_proj = bootstrap.normalize_ado_base_and_project(
+            "https://contoso.visualstudio.com/Platform/_boards",
+            "contoso",
+            "Default",
+        )
+        self.assertEqual(vs_proj, "Platform")
+        self.assertEqual(vs_base, "https://contoso.visualstudio.com/Platform")
+
+    def test_normalize_git_repo_url_strips_browser_suffixes_and_clone_prefix(self) -> None:
+        raw = "git clone https://dev.azure.com/acme/My%20Proj/_git/core-api/pullrequest/42"
+        self.assertEqual(
+            bootstrap.normalize_git_repo_url(raw),
+            "https://dev.azure.com/acme/My%20Proj/_git/core-api",
+        )
+        raw_spaces = "https://dev.azure.com/acme/My Proj/_git/core api"
+        self.assertEqual(
+            bootstrap.normalize_git_repo_url(raw_spaces),
+            "https://dev.azure.com/acme/My%20Proj/_git/core%20api",
+        )
+
+    def test_derive_and_validate_sibling_name_unhappy_paths(self) -> None:
+        self.assertEqual(
+            bootstrap.derive_repo_name_from_url(
+                "https://dev.azure.com/acme/Proj/_git/billing%20service.git"
+            ),
+            "billing-service",
+        )
+        self.assertEqual(
+            bootstrap.derive_repo_name_from_url(
+                r"C:\Users\RUNNER~1\AppData\Local\Temp\tmpw4n1zclv\valid-service.git"
+            ),
+            "valid-service",
+        )
+        existing = [
+            bootstrap.SiblingRepo(
+                name="billing-service",
+                url="https://dev.azure.com/acme/Proj/_git/billing-service",
+                role="Billing",
+            )
+        ]
+        ok, err = bootstrap.validate_sibling_name("../escape", existing, "ws-slug")
+        self.assertFalse(ok)
+        self.assertIn("without slashes", err)
+
+        ok, err = bootstrap.validate_sibling_name("ws-slug", existing, "ws-slug")
+        self.assertFalse(ok)
+        self.assertIn("conflicts with the workspace", err)
+
+        ok, err = bootstrap.validate_sibling_name("Billing-Service", existing, "ws-slug")
+        self.assertFalse(ok)
+        self.assertIn("already in the list", err)
+
+        ok, clean = bootstrap.validate_sibling_name("orders-api", existing, "ws-slug")
+        self.assertTrue(ok)
+        self.assertEqual(clean, "orders-api")
+
+    def test_write_and_load_provider_specific_env_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = bootstrap.WorkspaceConfig(
+                tracker_type="azure-devops",
+                vcs_platform="azure-repos",
+            )
+            env_name = bootstrap.default_env_filename(cfg)
+            self.assertEqual(env_name, ".env.azure")
+            env_path = root / env_name
+            bootstrap.write_env_vars(
+                env_path,
+                {
+                    "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/acme/proj",
+                    "AZURE_DEVOPS_EXT_PAT": "secret-pat-123",
+                },
+            )
+            loaded = bootstrap.load_env_files(root)
+            self.assertEqual(loaded["AZURE_DEVOPS_EXT_PAT"], "secret-pat-123")
+
+    def test_verify_git_repo_url_valid_and_invalid_local_repo(self) -> None:
+        import subprocess as sp
+
+        with tempfile.TemporaryDirectory() as tmp:
+            bare_repo = Path(tmp) / "remote.git"
+            sp.run(["git", "init", "--bare", str(bare_repo)], check=True, capture_output=True)
+
+            ok, msg = bootstrap.verify_git_repo_url(str(bare_repo))
+            self.assertTrue(ok, msg)
+
+            bad_ok, bad_msg = bootstrap.verify_git_repo_url(str(Path(tmp) / "nonexistent-repo.git"))
+            self.assertFalse(bad_ok)
+            self.assertTrue(bad_msg)
+
+    def test_prompt_and_verify_siblings_rejects_bad_url_until_valid_or_skipped(self) -> None:
+        import subprocess as sp
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            bare_repo = Path(tmp) / "valid-service.git"
+            sp.run(["git", "init", "--bare", str(bare_repo)], check=True, capture_output=True)
+            invalid_repo = str(Path(tmp) / "does-not-exist.git")
+
+            cfg = bootstrap.WorkspaceConfig(
+                slug="my-ws",
+                tracker_type="azure-devops",
+                vcs_platform="azure-repos",
+            )
+            # Flow:
+            # 1. Add a sibling? -> y
+            # 2. Enter invalid URL -> rejected by git ls-remote
+            # 3. Enter valid bare_repo URL -> accepted
+            # 4. Enter invalid folder name '../bad' -> rejected
+            # 5. Accept default folder name '' -> 'valid-service'
+            # 6. Enter role 'Core service'
+            # 7. Select access mode '' (default 'active')
+            # 8. Add another sibling? -> y
+            # 9. Enter invalid URL -> rejected
+            # 10. Enter '' (blank to skip)
+            # 11. Add another sibling? -> n
+            inputs = iter([
+                "y",
+                invalid_repo,
+                str(bare_repo),
+                "../bad",
+                "",
+                "Core service",
+                "",
+                "y",
+                invalid_repo,
+                "",
+                "n",
+            ])
+            with mock.patch("builtins.input", side_effect=lambda _prompt="": next(inputs)):
+                siblings = bootstrap.prompt_and_verify_siblings(cfg)
+
+            self.assertEqual(len(siblings), 1)
+            self.assertEqual(siblings[0].name, "valid-service")
+            self.assertEqual(siblings[0].url, str(bare_repo))
+            self.assertEqual(siblings[0].role, "Core service")
+            self.assertEqual(siblings[0].access, "active")
+
+    def test_render_onboarding_primer_tailored_to_framework_and_tracker(self) -> None:
+        cfg = bootstrap.WorkspaceConfig(
+            name="Contoso ADO Workspace",
+            slug="contoso-ado",
+            planning_framework="safe",
+            tracker_type="azure-devops",
+            vcs_platform="azure-repos",
+            siblings=[
+                bootstrap.SiblingRepo(
+                    name="payments-api",
+                    url="https://dev.azure.com/contoso/Proj/_git/payments-api",
+                    role="Payments API",
+                )
+            ],
+        )
+        primer = bootstrap.render_onboarding_primer(cfg, "python3")
+        self.assertIn("Program Increment (PI 01)", primer)
+        self.assertIn("ado-work-item-onboard", primer)
+        self.assertIn("payments-api", primer)
+        self.assertIn("bootstrap.py --add-sibling", primer)
+        self.assertIn("planning-scaffold", primer)
+        self.assertIn("story-refiner", primer)
+        self.assertIn("consensus-check", primer)
+
 
 if __name__ == "__main__":
     unittest.main()

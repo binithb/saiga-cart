@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 
-ALLOWED_STATUSES = {"Not started", "In progress", "Blocked", "Done"}
+ALLOWED_STATUSES = {"Not started", "In progress", "In review", "Blocked", "Done"}
 ALLOWED_EFFORTS = {"Small", "Medium", "Large"}
 ALLOWED_DOR_STATUSES = {"Draft", "Pending Clarification", "Done"}
 DEFAULT_TICKET_RE = re.compile(r"\b[A-Z][A-Z0-9]+-\d+\b|#\d+\b")
@@ -136,6 +136,12 @@ class PlanningAuditor:
                     self.add("WARNING", progress, f"{story.name} is Done but remains unchecked")
                 elif status != "Done" and checked:
                     self.add("WARNING", progress, f"{story.name} is {status} but is checked")
+            label = progress_labels.get(resolved)
+            if label:
+                if label not in ALLOWED_STATUSES:
+                    self.add("ERROR", progress, f"unsupported progress status label for {story.name}: {label}")
+                elif status and label != status:
+                    self.add("WARNING", progress, f"{story.name} is {status} in story metadata but {label} in progress.md")
 
     def audit_story(self, story: Path) -> str | None:
         text = story.read_text(encoding="utf-8")
@@ -293,6 +299,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=default_root(), help="workspace root directory")
     parser.add_argument("--scope", help="audit only this scope (e.g. PI number, Sprint number)")
     parser.add_argument("--planning-dir", default="planning", help="planning directory name under docs/")
+    parser.add_argument("--fail-on-warning", action="store_true", help="return non-zero exit code on warnings")
     parser.add_argument("--json", action="store_true", help="output findings as JSON")
     return parser.parse_args()
 
@@ -308,7 +315,11 @@ def main() -> int:
         errors = sum(item.severity == "ERROR" for item in findings)
         warnings = sum(item.severity == "WARNING" for item in findings)
         print(f"Summary: {errors} error(s), {warnings} warning(s)")
-    return 1 if any(item.severity == "ERROR" for item in findings) else 0
+    if any(item.severity == "ERROR" for item in findings):
+        return 1
+    if args.fail_on_warning and any(item.severity == "WARNING" for item in findings):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

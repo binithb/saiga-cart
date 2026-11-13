@@ -57,12 +57,16 @@ Use `python` on macOS/Linux or `py -3` on Windows if `python` is unavailable.
    ```bash
    python bootstrap.py
    ```
-4. Follow the prompts to configure your planning framework, issue tracker, and sibling repositories.
-5. Clone your sibling repositories:
+5. Follow the prompts to configure your planning framework, issue tracker, local credentials (`.env.azure`, `.env.jira`, `.env.github`, `.env.gitlab`, or `.env.local` / CLI keyring), and verified sibling repositories.
+6. Clone your sibling repositories (if not cloned automatically during setup):
    ```bash
    python scripts/clone_siblings.py
    ```
-6. Open in VS Code / Cursor:
+7. Add more sibling repositories anytime later:
+   ```bash
+   python bootstrap.py --add-sibling
+   ```
+8. Open in VS Code / Cursor:
    ```bash
    code your-workspace.code-workspace
    ```
@@ -103,8 +107,9 @@ saiga-cart/
 │       ├── planning-scaffold/      # Generates cycles/sprints/epics/stories
 │       ├── planning-docs-audit/    # Validates link integrity and metadata
 │       ├── consensus-check/        # Risk-scaled multi-agent deliberation
-│       ├── pr-create/              # Functional PR/MR creation
-│       └── pr-readiness-check/     # Definition of Done verification
+│       ├── harness2/               # Context budget validator, experience ledger & task probes
+│       ├── pr-create/              # Readiness + consensus check & functional PR/MR creation
+│       └── pr-reviewer/            # Interactive PR/MR review walkthrough & thread replies
 ├── scripts/
 │   ├── clone_siblings.py           # Cross-platform sibling repository checkout
 │   └── workspace_doctor.py         # Diagnostic verification utility
@@ -112,6 +117,7 @@ saiga-cart/
     ├── architecture.md             # Cross-repo system contracts & data flows
     ├── workflow.md                 # Working conventions, DoR/DoD, sizing rules
     ├── adr/                        # Architecture Decision Records (append-only)
+    ├── ai/                         # Cross-sprint Experience Ledger (experience.md)
     ├── planning/                   # Active cycles / increments / sprints
     └── presentation/               # Self-guided HTML presentation on AI WoW
 ```

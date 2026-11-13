@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "repositories": {
+    "saiga-cart": {
+      "domain": "multi_repo_planning_and_harness_governance",
+      "default_verifier": "python3 -B .github/skills/harness2/scripts/validate_harness.py --check-pi-compaction --check-zones && python3 -B .github/skills/planning-docs-audit/scripts/planning_docs_audit.py",
+      "verifier_paths": [
+        ".github/skills/harness2/scripts/validate_harness.py",
+        ".github/skills/planning-docs-audit/scripts/planning_docs_audit.py"
+      ],
+      "inv_levers": [
+        "Run planning_docs_audit.py, story_readiness.py, and validate_harness.py before and after edits",
+        "Check bidirectional issue-tracker links, repository permalinks, and -<KEY> story filename suffixes",
+        "Verify local Markdown links, ADR index tables, and script path references resolve on disk"
+      ],
+      "dom_levers": [
+        "Preserve instruction precedence: AGENTS.md -> docs/workflow.md -> docs/architecture.md -> ADRs -> SKILL.md -> stories",
+        "Keep remote tracker issues sparse/high-level for stakeholders and local story files detailed with steps and checkpoints",
+        "Graduate recurring rules down the Cost Hierarchy (Script -> Skill -> Experience -> ADR -> AGENTS.md)"
+      ]
+    }
+  }
+}

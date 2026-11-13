@@ -12,10 +12,10 @@ from pathlib import Path
 
 
 def load_local_env() -> None:
-    """Load credentials from .env.local or .env if present."""
+    """Load credentials from .env.jira, .env.local, or .env if present."""
     search_dirs = [Path.cwd(), Path(__file__).resolve().parents[4]]
     for directory in search_dirs:
-        for filename in (".env.local", ".env"):
+        for filename in (".env.local", ".env.jira", ".env"):
             env_file = directory / filename
             if env_file.is_file():
                 try:

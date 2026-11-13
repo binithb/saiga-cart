@@ -30,10 +30,20 @@ def check(status: bool, message: str, is_warning: bool = False):
         return False
 
 
+ENV_FILENAMES = (
+    ".env.local",
+    ".env.azure",
+    ".env.jira",
+    ".env.github",
+    ".env.gitlab",
+    ".env",
+)
+
+
 def load_env_file(root: Path) -> dict[str, str]:
-    """Load key-value pairs from .env.local or .env into os.environ if not already set."""
+    """Load key-value pairs from local .env* files into os.environ if not already set."""
     loaded = {}
-    for filename in (".env.local", ".env"):
+    for filename in ENV_FILENAMES:
         env_path = root / filename
         if env_path.is_file():
             try:
@@ -41,6 +51,8 @@ def load_env_file(root: Path) -> dict[str, str]:
                     line = line.strip()
                     if not line or line.startswith("#") or "=" not in line:
                         continue
+                    if line.startswith("export "):
+                        line = line[len("export "):].strip()
                     key, val = line.split("=", 1)
                     key = key.strip()
                     val = val.strip().strip("'\"")
@@ -92,7 +104,7 @@ def run_diagnostics(root: Path) -> int:
 
     # 2. CLI Tools
     print(f"\n{BOLD}2. Developer CLI Tools:{RESET}")
-    for tool in ("git", "gh", "glab", "code"):
+    for tool in ("git", "gh", "glab", "az", "code"):
         present = shutil.which(tool) is not None
         check(present, f"CLI tool: {tool}", is_warning=(tool != "git"))
 
@@ -136,17 +148,25 @@ def run_diagnostics(root: Path) -> int:
     else:
         check(False, "Planning docs audit script not found", is_warning=True)
 
+    harness_script = root / ".github" / "skills" / "harness2" / "scripts" / "validate_harness.py"
+    if harness_script.is_file():
+        h_res = subprocess.run([sys.executable, str(harness_script), "--root", str(root)], capture_output=True, text=True)
+        h_ok = h_res.returncode == 0
+        if not check(h_ok, "Harness² context budget & skill/script parity audit"):
+            print(f"{DIM}{h_res.stdout}{RESET}")
+            errors += 1
+
     # 6. Integrations & Authentication
     print(f"\n{BOLD}6. Authentication & API Tokens (for Agents & Skills):{RESET}")
     settings = get_workspace_settings(root)
     tracker_type = settings["tracker_type"]
     vcs_platform = settings["vcs_platform"]
 
-    env_file_exists = (root / ".env.local").is_file() or (root / ".env").is_file()
-    if env_file_exists:
-        check(True, "Local environment file present (.env.local / .env)")
+    present_env_files = [f for f in ENV_FILENAMES if (root / f).is_file()]
+    if present_env_files:
+        check(True, f"Local environment file present ({', '.join(present_env_files)})")
     else:
-        check(False, "No local .env.local or .env file found (copy from .env.example to configure tokens)", is_warning=True)
+        check(False, "No local .env* file found (run bootstrap.py or copy from .env.example to configure tokens)", is_warning=True)
 
     if tracker_type == "jira":
         jira_token = os.environ.get("JIRA_API_TOKEN")
