@@ -874,7 +874,7 @@ def render_template_str(template: str, context: dict[str, str]) -> str:
     result = template
     for key, val in context.items():
         pattern = re.compile(r"\{\{\s*" + re.escape(key) + r"(?:\|default\([^)]*\))?\s*\}\}")
-        result = pattern.sub(val, result)
+        result = pattern.sub(lambda _m, v=val: v, result)
     # Clear any remaining unmatched simple defaults
     result = re.sub(r"\{\{\s*([A-Za-z0-9_]+)\|default\(\"([^\"]*)\"\)\s*\}\}", r"\2", result)
     result = re.sub(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", "", result)

@@ -48,6 +48,11 @@ class TestBootstrapUnit(unittest.TestCase):
         res = bootstrap.render_template_str(tmpl, {"WORKSPACE_NAME": "Alpha"})
         self.assertEqual(res, 'Name: Alpha, Sprintf: fallback, Empty: ')
 
+    def test_render_template_str_preserves_backslashes_in_values(self) -> None:
+        tmpl = "Desc: {{WORKSPACE_DESC}}"
+        res = bootstrap.render_template_str(tmpl, {"WORKSPACE_DESC": r"Path C:\Users\name\test \U \1"})
+        self.assertEqual(res, r"Desc: Path C:\Users\name\test \U \1")
+
     def test_sibling_clone_utility_is_platform_neutral(self) -> None:
         script = bootstrap.clone_siblings_script()
 
