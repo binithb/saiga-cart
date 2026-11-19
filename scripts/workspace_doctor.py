@@ -205,7 +205,16 @@ def run_diagnostics(root: Path) -> int:
         az_exe = shutil.which("az")
         if az_exe:
             try:
-                res = subprocess.run([az_exe, "account", "show"], capture_output=True, text=True)
+                az_env = dict(os.environ)
+                az_env.setdefault("AZURE_CORE_COLLECT_TELEMETRY", "0")
+                res = subprocess.run(
+                    [az_exe, "account", "show"],
+                    cwd=Path.home(),
+                    env=az_env,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
                 az_auth = (res.returncode == 0)
             except Exception:
                 pass

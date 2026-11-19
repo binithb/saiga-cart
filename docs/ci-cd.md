@@ -12,12 +12,14 @@ The pipeline comprises two sequential stages:
    - **Operating Systems**: `ubuntu-latest`, `macos-latest`, `windows-latest`
    - **Runtime**: Python 3.12 (standard library `unittest` framework)
    - **Test Scopes**:
-     - Unit & smoke matrix suite (`tests/`)
+     - Unit, smoke matrix, and E2E onboarding suite (`tests/`)
+     - Harness² surface & experience validator suite (`.github/skills/harness2/scripts/test_validate_harness.py`)
      - Planning docs audit skill suite (`.github/skills/planning-docs-audit/scripts/test_planning_docs_audit.py`)
      - Story readiness skill suite (`.github/skills/story-refiner/scripts/test_story_readiness.py`)
+     - GitLab MR discussions skill suite (`.github/skills/pr-reviewer/scripts/test_gitlab_mr_discussions.py`)
 
 2. **GitHub Pages Deployment (`deploy-pages`)**:
-   - **Trigger Condition**: Executes only on successful completion of the `test` job for pushes to the `main` branch (or via manual `workflow_dispatch`).
+   - **Trigger Condition**: Executes only on successful completion of the `test` job for pushes to the `main` or `master` branch (or via manual `workflow_dispatch`).
    - **Source Directory**: `docs/presentation`
    - **Target**: GitHub Pages environment (`github-pages`)
 
@@ -25,8 +27,8 @@ The pipeline comprises two sequential stages:
 
 ## Triggers & Concurrency
 
-- **Push**: Triggered on commits pushed to `main`.
-- **Pull Request**: Triggered on pull requests targeting `main` (validation only; deployment is skipped).
+- **Push**: Triggered on commits pushed to `main` or `master`.
+- **Pull Request**: Triggered on pull requests targeting `main` or `master` (validation only; deployment is skipped).
 - **Workflow Dispatch**: Allows manual runs from the GitHub Actions UI.
 - **Concurrency Management**:
   - Workflow-level: In-progress PR validation runs are cancelled when new commits are pushed (`cancel-in-progress: true` on PRs).

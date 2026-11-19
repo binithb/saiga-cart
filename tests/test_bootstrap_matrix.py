@@ -63,10 +63,6 @@ class TestBootstrapMatrix(unittest.TestCase):
                 )
                 self.assertEqual(audit_res.returncode, 0, f"Planning docs audit failed:\n{audit_res.stdout}\n{audit_res.stderr}")
 
-    def test_preset_github_scrum(self):
-        """Alias for test_e2e_smoke_github_scrum_preset."""
-        return self.test_e2e_smoke_github_scrum_preset()
-
     def test_e2e_standalone_generation_to_empty_directory(self):
         """Smoke path: Seeding an empty standalone directory."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -88,10 +84,6 @@ class TestBootstrapMatrix(unittest.TestCase):
             self.assertEqual(res.returncode, 0, f"Bootstrap failed:\n{res.stdout}\n{res.stderr}")
             self.assertTrue((target / "bootstrap.py").is_file())
             self.assertTrue((target / "scripts" / "clone_siblings.py").is_file())
-
-    def test_standalone_generation_to_empty_directory(self):
-        """Alias for test_e2e_standalone_generation_to_empty_directory."""
-        return self.test_e2e_standalone_generation_to_empty_directory()
 
     def test_e2e_smoke_jira_safe_preset(self):
         """Documented Smoke Path 2: Jira + SAFe Program Increments."""
@@ -141,10 +133,6 @@ class TestBootstrapMatrix(unittest.TestCase):
                     cwd=target
                 )
                 self.assertEqual(audit_res.returncode, 0, f"Planning docs audit failed:\n{audit_res.stdout}\n{audit_res.stderr}")
-
-    def test_preset_jira_safe(self):
-        """Alias for test_e2e_smoke_jira_safe_preset."""
-        return self.test_e2e_smoke_jira_safe_preset()
 
     def test_e2e_smoke_ado_scrum_preset(self):
         """Documented Smoke Path 3: Azure DevOps + Scrum Sprints + Azure Repos."""
@@ -201,10 +189,6 @@ class TestBootstrapMatrix(unittest.TestCase):
                     cwd=target,
                 )
                 self.assertEqual(audit_res.returncode, 0, f"Planning docs audit failed:\n{audit_res.stdout}\n{audit_res.stderr}")
-
-    def test_preset_ado_scrum(self):
-        """Alias for test_e2e_smoke_ado_scrum_preset."""
-        return self.test_e2e_smoke_ado_scrum_preset()
 
 
 if __name__ == "__main__":

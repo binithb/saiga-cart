@@ -434,9 +434,12 @@ def verify_provider_auth(
         az_exe = shutil.which("az", path=lookup.get("PATH"))
         if az_exe:
             try:
+                az_env = dict(lookup)
+                az_env.setdefault("AZURE_CORE_COLLECT_TELEMETRY", "0")
                 res = subprocess.run(
                     [az_exe, "account", "show"],
-                    env=lookup,
+                    cwd=Path.home(),
+                    env=az_env,
                     capture_output=True,
                     text=True,
                     timeout=timeout,

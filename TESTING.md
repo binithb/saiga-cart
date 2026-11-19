@@ -64,3 +64,14 @@ those respective workflows.
 
 The same module also verifies standalone generation into an empty directory via
 `test_e2e_standalone_generation_to_empty_directory`.
+
+## Interactive & Deferred Onboarding Flow Tests
+
+`tests/test_user_onboarding_flows.py` (backed by the local mock HTTP/Git sandbox in
+`tests/mocks/tracker_sandbox.py`) verifies end-to-end onboarding journeys across
+Jira Cloud and Azure DevOps:
+
+- Interactive wizard setup without presets (live API credential verification + immediate sibling repo `git ls-remote` verification + ticket onboarding).
+- Interactive wizard setup without sibling repos at start, followed by deferred sibling onboarding and workspace remapping via the `add-sibling` skill workflow.
+- Fast preset setup (`--preset jira-safe` and `--preset ado-scrum`), followed by deferred sibling onboarding via `add-sibling`.
+
