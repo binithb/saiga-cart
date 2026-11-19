@@ -183,9 +183,10 @@ def run_diagnostics(root: Path) -> int:
     if tracker_type == "gitlab" or vcs_platform == "gitlab":
         gl_token = os.environ.get("GITLAB_TOKEN")
         glab_auth = False
-        if shutil.which("glab"):
+        glab_exe = shutil.which("glab")
+        if glab_exe:
             try:
-                res = subprocess.run(["glab", "auth", "status"], capture_output=True, text=True)
+                res = subprocess.run([glab_exe, "auth", "status"], capture_output=True, text=True)
                 glab_auth = (res.returncode == 0)
             except Exception:
                 pass
@@ -201,9 +202,10 @@ def run_diagnostics(root: Path) -> int:
     if tracker_type == "azure-devops" or vcs_platform == "azure-repos":
         ado_pat = os.environ.get("AZURE_DEVOPS_EXT_PAT")
         az_auth = False
-        if shutil.which("az"):
+        az_exe = shutil.which("az")
+        if az_exe:
             try:
-                res = subprocess.run(["az", "account", "show"], capture_output=True, text=True)
+                res = subprocess.run([az_exe, "account", "show"], capture_output=True, text=True)
                 az_auth = (res.returncode == 0)
             except Exception:
                 pass
@@ -219,9 +221,10 @@ def run_diagnostics(root: Path) -> int:
     if tracker_type == "github" or vcs_platform == "github":
         gh_token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
         gh_auth = False
-        if shutil.which("gh"):
+        gh_exe = shutil.which("gh")
+        if gh_exe:
             try:
-                res = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
+                res = subprocess.run([gh_exe, "auth", "status"], capture_output=True, text=True)
                 gh_auth = (res.returncode == 0)
             except Exception:
                 pass

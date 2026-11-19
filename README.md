@@ -55,47 +55,58 @@ Use `python` on macOS/Linux or `py -3` on Windows if `python` is unavailable.
 > └── service-b/                 # Cloned sibling repo 2
 > ```
 
-### Option A: Interactive Setup into a New Folder (Recommended)
-1. Clone `saiga-cart` inside your parent workspace directory:
-   ```bash
-   mkdir -p ~/work && cd ~/work
-   git clone https://github.com/binithb/saiga-cart.git
-   cd saiga-cart
-   ```
-2. Run the interactive setup wizard (it will prompt you for your new workspace folder path, defaulting to `../<workspace-slug>`, or you can pass `--output ../my-ai-workspace` explicitly):
-   ```bash
-   python bootstrap.py
-   # Or specify the target folder directly:
-   python bootstrap.py --output ../my-ai-workspace
-   ```
-3. Follow the prompts to configure your target workspace directory, planning framework, issue tracker, local credentials (`.env.azure`, `.env.jira`, `.env.github`, `.env.gitlab`, or `.env.local` / CLI keyring), and verified sibling repositories.
-4. Switch into your newly created workspace folder and clone your sibling repositories (if not cloned automatically during setup):
-   ```bash
-   cd ../my-ai-workspace
-   python scripts/clone_siblings.py
-   ```
-5. Add more sibling repositories anytime later from inside your generated workspace:
-   ```bash
-   python bootstrap.py --add-sibling
-   ```
-6. Open the unified multi-root workspace in VS Code / Cursor:
-   ```bash
-   code my-ai-workspace.code-workspace
-   ```
-
-### Option B: Non-Interactive / CI Preset into a New Folder
+Clone `saiga-cart` inside your parent workspace directory first:
 ```bash
-# Scrum + GitHub Issues
-python bootstrap.py --preset github-scrum --output ../my-gh-workspace
-
-# SAFe (PIs) + Jira Cloud
-python bootstrap.py --preset jira-safe --output ../my-jira-workspace
-
-# Scrum + Azure DevOps
-python bootstrap.py --preset ado-scrum --output ../my-ado-workspace
+mkdir -p ~/work && cd ~/work
+git clone https://github.com/binithb/saiga-cart.git
+cd saiga-cart
 ```
 
-Then, inside your AI coding assistant (GitHub Copilot CLI, Claude Code, Cursor), run `/add-sibling <git-repo-url>` to inspect each sibling repository, confirm its architectural intent, and automatically remap `AGENTS.md`, `docs/architecture.md`, and the Azure DevOps base URL.
+### Option A: Fast Preset + `/add-sibling` in AI Chat (Fastest & Easiest)
+Generate your workspace in one command using a preset, then let your AI assistant inspect your repositories and configure everything automatically:
+
+```bash
+# Pick the preset matching your team's stack:
+python bootstrap.py --preset github-scrum --output ../my-ai-workspace   # GitHub Issues + PRs + Scrum
+python bootstrap.py --preset jira-safe    --output ../my-ai-workspace   # Jira Cloud + GitLab MRs + SAFe PIs
+python bootstrap.py --preset ado-scrum    --output ../my-ai-workspace   # Azure DevOps Boards + Repos + Scrum
+
+# Switch into your newly generated workspace before launching your AI assistant:
+cd ../my-ai-workspace
+```
+
+Then open `../my-ai-workspace` in your AI assistant (GitHub Copilot CLI, Claude Code, or Cursor) and run:
+```text
+/add-sibling <your-git-repo-url>
+```
+The `add-sibling` skill verifies and clones the repository into `../<repo-name>`, inspects its tech stack and API contracts, asks you to confirm its architectural role, and automatically updates `AGENTS.md`, `docs/architecture.md`, and your issue tracker skills.
+
+### Option B: Interactive Guided Wizard (Token Verification & Custom Topologies)
+Prefer a guided terminal walkthrough that tests your API tokens (`.env.jira`, `.env.azure`, `.env.github`, `.env.gitlab`) and verifies sibling repository URLs immediately?
+
+```bash
+python bootstrap.py
+# Or specify the target folder upfront:
+python bootstrap.py --output ../my-ai-workspace
+```
+
+1. **Question #1** lets you pick a **Quick Preset** (`github-scrum`, `jira-safe`, `ado-scrum`) or **Custom Setup** (Scrum, SAFe, Shape Up, or Kanban).
+2. Configure and live-test your tracker/VCS credentials (or skip and configure later).
+3. Add sibling repository URLs right away (verified via `git ls-remote`) or skip and use `/add-sibling` later.
+
+---
+
+## ⏱️ Your First 5 Minutes (Day-1 AI Workflow)
+
+Once your workspace is created (`cd ../my-ai-workspace`), follow this progression in your AI coding assistant:
+
+| Step | What You Type in AI Chat (or Terminal) | What Happens |
+|---|---|---|
+| **1. Add Repos** | `/add-sibling <git-repo-url>` | Clones `../<repo>`, inspects stack/contracts, and remaps `AGENTS.md` & `docs/architecture.md`. |
+| **2. Plan Epic & Stories** | `"Use planning-scaffold to create our first epic and stories in docs/planning/01/"` | Scaffolds markdown epic `plan.md`, `progress.md`, and story specs. |
+| **3. Refine & Size** | `"Run story-refiner on docs/planning/01/"` | Checks Definition of Ready (DoR), surfaces open decisions via `ask_user`, and sizes stories. |
+| **4. Sync to Tracker** | `"Use jira-story-onboard (or ado-work-item-onboard / github-issue-onboard) on our ready story"` | Creates the remote ticket after your confirmation, renames `<story>-<KEY>.md`, and links bidirectionally. |
+| **5. Ship & Review** | `"Use pr-create to run readiness + consensus checks and open our PR/MR"` | Runs multi-model `consensus-check`, verifies DoD, and creates the PR/MR. |
 
 ---
 

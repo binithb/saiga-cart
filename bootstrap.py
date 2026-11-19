@@ -431,10 +431,12 @@ def verify_provider_auth(
             except Exception as err:
                 return False, f"Could not reach Azure DevOps ({org_root}): {err}"
 
-        if shutil.which("az"):
+        az_exe = shutil.which("az", path=lookup.get("PATH"))
+        if az_exe:
             try:
                 res = subprocess.run(
-                    ["az", "account", "show"],
+                    [az_exe, "account", "show"],
+                    env=lookup,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -485,10 +487,12 @@ def verify_provider_auth(
                 return False, f"GitHub token rejected (HTTP {err.code}). Ensure PAT has 'repo' scope."
             except Exception as err:
                 return False, f"Could not reach GitHub API: {err}"
-        if shutil.which("gh"):
+        gh_exe = shutil.which("gh", path=lookup.get("PATH"))
+        if gh_exe:
             try:
                 res = subprocess.run(
-                    ["gh", "auth", "status"],
+                    [gh_exe, "auth", "status"],
+                    env=lookup,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -519,10 +523,12 @@ def verify_provider_auth(
                 return False, f"GitLab token rejected at {host_root} (HTTP {err.code}). Ensure token has 'api' scope."
             except Exception as err:
                 return False, f"Could not reach GitLab API ({host_root}): {err}"
-        if shutil.which("glab"):
+        glab_exe = shutil.which("glab", path=lookup.get("PATH"))
+        if glab_exe:
             try:
                 res = subprocess.run(
-                    ["glab", "auth", "status"],
+                    [glab_exe, "auth", "status"],
+                    env=lookup,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -916,56 +922,40 @@ def prompt_target_directory(source: Path, suggested_slug: str) -> Path:
         return candidate
 
 
-def run_interactive_wizard(
-    root: Path | None = None,
-    explicit_output: Path | None = None,
-) -> tuple[WorkspaceConfig, Path]:
-    source_root = (root or Path(__file__).resolve().parent).resolve()
-    cfg = WorkspaceConfig()
-    
-    print(f"\n{BLUE}{BOLD}--- Section 1: Workspace Identity & Location ---{RESET}")
-    cfg.name = prompt_text("Workspace / Project Display Name", "Acme Platform AI Workspace")
-    suggested_slug = re.sub(r"[^a-z0-9]+", "-", cfg.name.lower()).strip("-")
-    cfg.slug = prompt_text("Workspace Directory / File Slug", suggested_slug)
-    cfg.description = prompt_text("Short Description", "Multi-repository AI planning and execution workspace")
-    cfg.org = prompt_text("Organization / Company / Namespace", "acme-corp")
+def build_preset_config(preset: str) -> WorkspaceConfig:
+    """Return a pre-populated WorkspaceConfig for a named preset."""
+    if preset == "jira-safe":
+        return WorkspaceConfig(
+            name="Acme Enterprise SAFe Workspace",
+            slug="acme-enterprise",
+            planning_framework="safe",
+            cadence_duration="8 weeks",
+            tracker_type="jira",
+            vcs_platform="gitlab",
+        )
+    if preset in ("ado-scrum", "azure-devops"):
+        return WorkspaceConfig(
+            name="Acme Azure DevOps Workspace",
+            slug="acme-ado-workspace",
+            planning_framework="scrum",
+            cadence_duration="2 weeks",
+            tracker_type="azure-devops",
+            tracker_base_url="https://dev.azure.com/acme-org",
+            tracker_project_key="ACME",
+            vcs_platform="azure-repos",
+        )
+    return WorkspaceConfig(
+        name="Acme GitHub Scrum Workspace",
+        slug="acme-workspace",
+        planning_framework="scrum",
+        cadence_duration="2 weeks",
+        tracker_type="github",
+        vcs_platform="github",
+    )
 
-    if explicit_output is not None:
-        target_root = explicit_output.resolve()
-    else:
-        target_root = prompt_target_directory(source_root, cfg.slug)
-    target_root = prepare_output_directory(source_root, target_root)
 
-    print(f"\n{BLUE}{BOLD}--- Section 2: Planning Methodology & Cadence ---{RESET}")
-    framework_choices = [
-        ("scrum", "Scrum / Sprints (Sprints -> Epics -> Stories)"),
-        ("safe", "Scaled Agile / PIs (Program Increments -> Goals -> Epics -> Stories)"),
-        ("shape-up", "Shape Up (6-week Cycles -> Pitches -> Scopes)"),
-        ("kanban", "Continuous Delivery / Kanban (Milestones -> Epics -> Tasks)"),
-    ]
-    cfg.planning_framework = prompt_choice("Planning Framework", framework_choices, "scrum")
-    
-    if cfg.planning_framework == "scrum":
-        dur_choices = [("1 week", "1-week sprint"), ("2 weeks", "2-week sprint"), ("3 weeks", "3-week sprint"), ("4 weeks", "4-week sprint")]
-        cfg.cadence_duration = prompt_choice("Sprint Duration", dur_choices, "2 weeks")
-    elif cfg.planning_framework == "safe":
-        dur_choices = [("8 weeks", "8-week PI (approx. 2 months)"), ("10 weeks", "10-week PI"), ("12 weeks", "12-week PI (quarterly)")]
-        cfg.cadence_duration = prompt_choice("Program Increment Duration", dur_choices, "8 weeks")
-    elif cfg.planning_framework == "shape-up":
-        cfg.cadence_duration = "6 weeks"
-    else:
-        cfg.cadence_duration = "continuous"
-
-    print(f"\n{BLUE}{BOLD}--- Section 3: Issue Tracking Tooling ---{RESET}")
-    tracker_choices = [
-        ("github", "GitHub Issues & Projects"),
-        ("jira", "Jira Cloud / Server (Atlassian)"),
-        ("gitlab", "GitLab Issues & Epics"),
-        ("azure-devops", "Azure DevOps Boards"),
-        ("none", "Local Markdown Only (no remote issue tracker sync)"),
-    ]
-    cfg.tracker_type = prompt_choice("Primary Task / Issue Tracker", tracker_choices, "github")
-    
+def _prompt_tracker_connection_details(cfg: WorkspaceConfig) -> None:
+    """Prompt only for the connection URL/project key needed by the active tracker."""
     if cfg.tracker_type == "jira":
         cfg.tracker_base_url = prompt_text("Jira Base URL", "https://company.atlassian.net")
         cfg.tracker_project_key = prompt_text("Jira Project Key", "PROJ")
@@ -994,33 +984,89 @@ def run_interactive_wizard(
             cfg.tracker_base_url, _ = normalize_ado_base_and_project(norm_base, cfg.org, cfg.tracker_project_key)
         print(f"  {DIM}ℹ Note: Azure DevOps integration uses AZURE_DEVOPS_EXT_PAT (Work Items & Code Read/Write) in .env.azure / .env.local or 'az devops login'{RESET}")
 
-    print(f"\n{BLUE}{BOLD}--- Section 4: Version Control & Code Reviews ---{RESET}")
-    vcs_choices = [
-        ("github", "GitHub (Pull Requests, GitHub Actions)"),
-        ("gitlab", "GitLab (Merge Requests, GitLab CI)"),
-        ("azure-repos", "Azure Repos"),
-        ("bitbucket", "Bitbucket"),
+
+def run_interactive_wizard(
+    root: Path | None = None,
+    explicit_output: Path | None = None,
+) -> tuple[WorkspaceConfig, Path]:
+    source_root = (root or Path(__file__).resolve().parent).resolve()
+
+    print(f"\n{BLUE}{BOLD}--- Section 1: Quick Preset or Custom Setup ---{RESET}")
+    setup_mode_choices = [
+        ("github-scrum", "Quick Preset: GitHub Issues + GitHub PRs + Scrum Sprints (2 weeks)"),
+        ("jira-safe", "Quick Preset: Jira Cloud + GitLab MRs + SAFe Program Increments (8 weeks)"),
+        ("ado-scrum", "Quick Preset: Azure DevOps Boards + Azure Repos + Scrum Sprints (2 weeks)"),
+        ("custom", "Custom Setup: Choose planning framework, tracker, and VCS step-by-step"),
     ]
-    default_vcs = (
-        "azure-repos"
-        if cfg.tracker_type == "azure-devops"
-        else ("github" if cfg.tracker_type == "github" else "gitlab")
+    setup_mode = prompt_choice(
+        "How would you like to configure this workspace?",
+        setup_mode_choices,
+        "custom",
     )
-    cfg.vcs_platform = prompt_choice("Version Control Platform", vcs_choices, default_vcs)
-    cfg.consensus_review_enabled = prompt_bool("Enable Multi-Model Consensus Review Gate (consensus-check)?", True)
-    cfg.dod_gate_enabled = prompt_bool("Enable Definition-of-Done Pre-Flight Gate in pr-create?", True)
+
+    cfg = build_preset_config(setup_mode) if setup_mode != "custom" else WorkspaceConfig()
+    default_name = cfg.name if setup_mode != "custom" else "Acme Platform AI Workspace"
+
+    print(f"\n{BLUE}{BOLD}--- Section 2: Workspace Identity & Location ---{RESET}")
+    cfg.name = prompt_text("Workspace / Project Display Name", default_name)
+    cfg.slug = re.sub(r"[^a-z0-9]+", "-", cfg.name.lower()).strip("-") or "ai-workspace"
+    cfg.org = prompt_text("Organization / Company / Namespace", cfg.org)
+
+    if explicit_output is not None:
+        target_root = explicit_output.resolve()
+    else:
+        target_root = prompt_target_directory(source_root, cfg.slug)
+    target_root = prepare_output_directory(source_root, target_root)
+
+    if setup_mode == "custom":
+        print(f"\n{BLUE}{BOLD}--- Section 3: Planning, Tracker & Version Control ---{RESET}")
+        framework_choices = [
+            ("scrum", "Scrum / Sprints (2-week Sprints -> Epics -> Stories)"),
+            ("safe", "Scaled Agile / PIs (8-week Program Increments -> Goals -> Epics -> Stories)"),
+            ("shape-up", "Shape Up (6-week Cycles -> Pitches -> Scopes)"),
+            ("kanban", "Continuous Delivery / Kanban (Milestones -> Epics -> Tasks)"),
+        ]
+        cfg.planning_framework = prompt_choice("Planning Framework", framework_choices, "scrum")
+        cadence_defaults = {
+            "scrum": "2 weeks",
+            "safe": "8 weeks",
+            "shape-up": "6 weeks",
+            "kanban": "continuous",
+        }
+        cfg.cadence_duration = cadence_defaults.get(cfg.planning_framework, "2 weeks")
+
+        tracker_choices = [
+            ("github", "GitHub Issues & Projects"),
+            ("jira", "Jira Cloud / Server (Atlassian)"),
+            ("gitlab", "GitLab Issues & Epics"),
+            ("azure-devops", "Azure DevOps Boards"),
+            ("none", "Local Markdown Only (no remote issue tracker sync)"),
+        ]
+        cfg.tracker_type = prompt_choice("Primary Task / Issue Tracker", tracker_choices, "github")
+        _prompt_tracker_connection_details(cfg)
+
+        vcs_choices = [
+            ("github", "GitHub (Pull Requests, GitHub Actions)"),
+            ("gitlab", "GitLab (Merge Requests, GitLab CI)"),
+            ("azure-repos", "Azure Repos"),
+            ("bitbucket", "Bitbucket"),
+        ]
+        default_vcs = (
+            "azure-repos"
+            if cfg.tracker_type == "azure-devops"
+            else ("github" if cfg.tracker_type == "github" else "gitlab")
+        )
+        cfg.vcs_platform = prompt_choice("Version Control Platform", vcs_choices, default_vcs)
+    else:
+        print(f"\n{BLUE}{BOLD}--- Section 3: Tracker Connection Details ({setup_mode}) ---{RESET}")
+        _prompt_tracker_connection_details(cfg)
 
     # Walk through token setup and live authentication verification before adding sibling repos
     run_interactive_auth_setup(cfg, target_root)
 
     print(f"\n{BLUE}{BOLD}--- Section 5: Multi-Repo Sibling Repositories ---{RESET}")
-    print(f"{DIM}Define sibling repositories to include in this unified multi-root workspace.{RESET}")
+    print(f"{DIM}Define sibling repositories now, or skip and use `/add-sibling <git-url>` in AI chat later.{RESET}")
     cfg.siblings = prompt_and_verify_siblings(cfg)
-
-    print(f"\n{BLUE}{BOLD}--- Section 6: AI Agent Directives ---{RESET}")
-    cfg.copilot = prompt_bool("Generate GitHub Copilot instructions (.github/copilot-instructions.md)?", True)
-    cfg.claude = prompt_bool("Generate Claude Code instructions (CLAUDE.md)?", True)
-    cfg.cursor = prompt_bool("Generate Cursor IDE rules (.cursorrules)?", True)
 
     return cfg, target_root
 
@@ -2237,45 +2283,8 @@ def main() -> None:
         except (ValueError, FileNotFoundError) as error:
             print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)
-    elif args.preset == "github-scrum" or (args.non_interactive and not args.preset):
-        cfg = WorkspaceConfig(
-            name="Acme GitHub Scrum Workspace",
-            slug="acme-workspace",
-            planning_framework="scrum",
-            cadence_duration="2 weeks",
-            tracker_type="github",
-            vcs_platform="github",
-        )
-        try:
-            output = prepare_output_directory(source_dir, target_dir)
-        except ValueError as error:
-            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
-            raise SystemExit(2)
-    elif args.preset == "jira-safe":
-        cfg = WorkspaceConfig(
-            name="Acme Enterprise SAFe Workspace",
-            slug="acme-enterprise",
-            planning_framework="safe",
-            cadence_duration="8 weeks",
-            tracker_type="jira",
-            vcs_platform="gitlab",
-        )
-        try:
-            output = prepare_output_directory(source_dir, target_dir)
-        except ValueError as error:
-            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
-            raise SystemExit(2)
-    elif args.preset in ("ado-scrum", "azure-devops"):
-        cfg = WorkspaceConfig(
-            name="Acme Azure DevOps Workspace",
-            slug="acme-ado-workspace",
-            planning_framework="scrum",
-            cadence_duration="2 weeks",
-            tracker_type="azure-devops",
-            tracker_base_url="https://dev.azure.com/acme-org",
-            tracker_project_key="ACME",
-            vcs_platform="azure-repos",
-        )
+    elif args.preset or args.non_interactive:
+        cfg = build_preset_config(args.preset or "github-scrum")
         try:
             output = prepare_output_directory(source_dir, target_dir)
         except ValueError as error:

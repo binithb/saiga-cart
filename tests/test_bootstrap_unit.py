@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "bootstrap.py"
@@ -329,7 +331,7 @@ class TestBootstrapUnit(unittest.TestCase):
         self.assertEqual(clean, "orders-api")
 
     def test_write_and_load_provider_specific_env_files(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {}, clear=False):
             root = Path(tmp)
             cfg = bootstrap.WorkspaceConfig(
                 tracker_type="azure-devops",
