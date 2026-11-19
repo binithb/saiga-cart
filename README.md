@@ -54,7 +54,7 @@ Use `python` or `python3` on macOS/Linux, or `python` / `py -3` on Windows (when
 ### ❌ When you don't need it
 - **Single-repository projects without structured AI delivery planning**: If all code lives in one repository and you don't need local DoR story gates or tracker sync, standard single-repo instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`) are usually sufficient.
 - **Standalone scripts or simple hobby apps**: Self-contained projects without cross-repo contracts, ADRs, or iterative planning cadences don't need a workspace orchestration layer.
-- **Teams without AI-assisted workflows**: If your team does not use AI coding assistants (GitHub Copilot, Claude Code, Cursor, Windsurf, etc.), the prompt harnesses, skills, and consensus panels add overhead without value.
+- **File- or function-level AI assistance only**: If you primarily use AI as a typing assistant at the file or function level (inline autocomplete, small local refactors, or quick single-file Q&A) rather than delegating multi-file or cross-repo agentic tasks, your IDE's built-in context is already enough—shared planning harnesses, skills, and consensus panels would add unnecessary overhead.
 
 ---
 
