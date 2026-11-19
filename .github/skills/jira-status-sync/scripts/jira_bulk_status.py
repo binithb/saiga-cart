@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Batch query Jira ticket status via REST API."""
 
+from __future__ import annotations
+
 import argparse
 import base64
 import json

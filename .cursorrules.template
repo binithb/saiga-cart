@@ -1,6 +1,7 @@
 # Cursor Rules — {{WORKSPACE_NAME|default("AI Workspace")}}
 
 - Always read `AGENTS.md` and `docs/workflow.md` before generating code or planning changes.
+- Consult `.github/skills/README.md` for task-specific workflows (e.g. `add-sibling`, `planning-scaffold`, `story-refiner`, `pr-create`).
 - Architecture contracts are documented in `docs/architecture.md`.
 - Sibling repositories are checked out alongside this workspace directory.
 - For high-risk or architectural changes, refer to existing ADRs in `docs/adr/`.

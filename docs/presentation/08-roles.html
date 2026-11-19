@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Human navigator, AI driver: an owner-labelled flow from Aim to Merge with Ready criteria, automated checks, and human review.">
   <title>Roles &amp; Flow · From Aim to Merge</title>
+  <link rel="canonical" href="https://binithb.github.io/saiga-cart/08-roles.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="saiga-cart">
+  <meta property="og:title" content="Roles &amp; Flow · From Aim to Merge | saiga-cart">
+  <meta property="og:description" content="Human navigator, AI driver: an owner-labelled flow from Aim to Merge with Ready criteria, automated checks, and human review.">
+  <meta property="og:url" content="https://binithb.github.io/saiga-cart/08-roles.html">
+  <meta property="og:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Roles &amp; Flow · From Aim to Merge | saiga-cart">
+  <meta name="twitter:description" content="Human navigator, AI driver: an owner-labelled flow from Aim to Merge with Ready criteria, automated checks, and human review.">
+  <meta name="twitter:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta name="twitter:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -43,6 +58,93 @@
     <section aria-labelledby="flow-heading">
       <span class="section-label">Aim → Map → Draft → Prove → Audit → Merge</span>
       <h2 id="flow-heading">From Aim to Merge</h2>
+
+      <figure class="diagram-box">
+        <div class="diagram-scroll" role="region" aria-label="Visual flowchart from Aim to Merge" tabindex="0">
+          <svg class="diagram-wide" viewBox="0 0 930 180" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fig8-title">
+            <title id="fig8-title">Flowchart: The 6 stages from Aim to Merge with Human and AI ownership</title>
+            <style>
+              .dg8-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+              .dg8-step-title { font-weight: 700; font-size: 13px; }
+              .dg8-step-owner { font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; font-weight: 700; }
+              .dg8-step-desc { font-size: 10.5px; fill: #475569; }
+              .dg8-step-gate { font-size: 10.5px; font-weight: 600; }
+            </style>
+
+            <defs>
+              <marker id="flow-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <path d="M 0 0 L 6 3 L 0 6 z" fill="#64748b" />
+              </marker>
+            </defs>
+
+            <!-- Step 1: Aim (Human) -->
+            <rect x="10" y="15" width="135" height="150" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" />
+            <rect x="20" y="25" width="80" height="18" rx="4" fill="#dbeafe" />
+            <text x="60" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#1d4ed8">01 · HUMAN</text>
+            <text x="20" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Aim</text>
+            <text x="20" y="84" class="dg8-text dg8-step-desc">Approve goals</text>
+            <text x="20" y="100" class="dg8-text dg8-step-desc">&amp; boundaries</text>
+            <text x="20" y="126" class="dg8-text dg8-step-gate" fill="#1e40af">Gate: Ready DoR</text>
+
+            <path d="M 148 90 L 160 90" stroke="#64748b" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+            <!-- Step 2: Map (AI) -->
+            <rect x="165" y="15" width="135" height="150" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" />
+            <rect x="175" y="25" width="62" height="18" rx="4" fill="#dcfce7" />
+            <text x="206" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#15803d">02 · AI</text>
+            <text x="175" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Map</text>
+            <text x="175" y="84" class="dg8-text dg8-step-desc">Inspect AGENTS,</text>
+            <text x="175" y="100" class="dg8-text dg8-step-desc">docs &amp; siblings</text>
+            <text x="175" y="126" class="dg8-text dg8-step-gate" fill="#166534">Surface gaps</text>
+
+            <path d="M 303 90 L 315 90" stroke="#64748b" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+            <!-- Step 3: Draft (AI) -->
+            <rect x="320" y="15" width="135" height="150" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" />
+            <rect x="330" y="25" width="62" height="18" rx="4" fill="#dcfce7" />
+            <text x="361" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#15803d">03 · AI</text>
+            <text x="330" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Draft</text>
+            <text x="330" y="84" class="dg8-text dg8-step-desc">Implement code</text>
+            <text x="330" y="100" class="dg8-text dg8-step-desc">on branch</text>
+            <text x="330" y="126" class="dg8-text dg8-step-gate" fill="#166534">Reversible diff</text>
+
+            <path d="M 458 90 L 470 90" stroke="#64748b" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+            <!-- Step 4: Prove (AI) -->
+            <rect x="475" y="15" width="135" height="150" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" />
+            <rect x="485" y="25" width="62" height="18" rx="4" fill="#dcfce7" />
+            <text x="516" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#15803d">04 · AI</text>
+            <text x="485" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Prove</text>
+            <text x="485" y="84" class="dg8-text dg8-step-desc">Run test suites,</text>
+            <text x="485" y="100" class="dg8-text dg8-step-desc">linters &amp; build</text>
+            <text x="485" y="126" class="dg8-text dg8-step-gate" fill="#166534">Pass proofs</text>
+
+            <path d="M 613 90 L 625 90" stroke="#64748b" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+            <!-- Step 5: Audit (Human) -->
+            <rect x="630" y="15" width="135" height="150" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" />
+            <rect x="640" y="25" width="80" height="18" rx="4" fill="#dbeafe" />
+            <text x="680" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#1d4ed8">05 · HUMAN</text>
+            <text x="640" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Audit</text>
+            <text x="640" y="84" class="dg8-text dg8-step-desc">Judge evidence,</text>
+            <text x="640" y="100" class="dg8-text dg8-step-desc">consensus &amp; diff</text>
+            <text x="640" y="126" class="dg8-text dg8-step-gate" fill="#1e40af">Gate: Review</text>
+
+            <path d="M 768 90 L 780 90" stroke="#64748b" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+            <!-- Step 6: Merge (Human-Led) -->
+            <rect x="785" y="15" width="135" height="150" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5" />
+            <rect x="795" y="25" width="98" height="18" rx="4" fill="#f3e8ff" />
+            <text x="844" y="38" text-anchor="middle" class="dg8-text dg8-step-owner" fill="#7e22ce">06 · HUMAN-LED</text>
+            <text x="795" y="64" class="dg8-text dg8-step-title" fill="#0f172a">Merge</text>
+            <text x="795" y="84" class="dg8-text dg8-step-desc">Authorize PR &amp;</text>
+            <text x="795" y="100" class="dg8-text dg8-step-desc">sync tracker</text>
+            <text x="795" y="126" class="dg8-text dg8-step-gate" fill="#7e22ce">Close loop</text>
+          </svg>
+        </div>
+        <figcaption class="diagram-caption">Figure 8.1: Human navigator (blue) sets boundaries &amp; audits; AI driver (green) maps, drafts &amp; proves; human-led merge (purple) closes the loop</figcaption>
+      </figure>
+
       <div class="grid">
         <article class="card span-4">
           <span class="card-number">01 · Aim · Human</span>

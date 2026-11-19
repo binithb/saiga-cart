@@ -457,6 +457,31 @@ class TestBootstrapUnit(unittest.TestCase):
 
             self.assertEqual(chosen, (parent / "my-new-ws").resolve())
 
+    def test_preset_with_explicit_output_derives_matching_workspace_slug(self) -> None:
+        import subprocess as sp
+        import sys
+
+        repo_root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "my-ai-workspace"
+            res = sp.run(
+                [
+                    sys.executable,
+                    str(repo_root / "bootstrap.py"),
+                    "--preset",
+                    "github-scrum",
+                    "--output",
+                    str(out_dir),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertTrue((out_dir / "my-ai-workspace.code-workspace").is_file())
+            cfg = bootstrap.load_workspace_config(out_dir / "workspace.yaml")
+            self.assertEqual(cfg.slug, "my-ai-workspace")
+
 
 if __name__ == "__main__":
     unittest.main()

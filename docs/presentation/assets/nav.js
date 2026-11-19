@@ -13,6 +13,7 @@ var pages = [
 ];
 
 var currentFile = window.location.pathname.split("/").pop() || "index.html";
+if (currentFile.indexOf(".") === -1) currentFile += ".html";
 var currentIndex = pages.findIndex(function (page) { return page.file === currentFile; });
 
 // Progressive enhancement only: no rebuilding, scrolling, or utility injection.
@@ -23,8 +24,9 @@ if (currentIndex !== -1) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     var target = event.target;
     if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
-    // Let keyboard users scroll an explicitly focusable table region.
+    // Let keyboard users scroll focusable horizontal regions without leaving the page.
     if (target && target.closest && target.closest('[role="region"]')) return;
+    if (target && target.scrollWidth > target.clientWidth) return;
 
     var destination = null;
     if (event.key === "ArrowLeft") destination = document.querySelector(".page-nav .prev");

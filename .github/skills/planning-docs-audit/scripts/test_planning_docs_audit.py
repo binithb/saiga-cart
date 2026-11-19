@@ -66,6 +66,11 @@ class TestPlanningDocsAudit(unittest.TestCase):
         findings_mismatch = PlanningAuditor(self.root).audit()
         self.assertTrue(any(f.severity == "WARNING" and "progress.md" in f.message for f in findings_mismatch))
 
+        # Passing a relative directory path via scope_id resolves cleanly
+        progress.write_text("# Progress\n- [ ] [Story 1](stories/story-1.md) — In review\n")
+        findings_rel_scope = PlanningAuditor(self.root, scope_id="docs/planning/01/").audit()
+        self.assertEqual(findings_rel_scope, [])
+
 
 
 if __name__ == "__main__":

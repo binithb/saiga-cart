@@ -62,10 +62,19 @@ class PlanningAuditor:
             self.audit_adr_index()
             return self.findings
 
-        scopes = [planning_root / self.scope_id] if self.scope_id else sorted(
-            path for path in planning_root.iterdir()
-            if path.is_dir() and not path.name.startswith((".", "templates", "pi-template", "sprint-template", "cycle-template", "kanban-template"))
-        )
+        if self.scope_id:
+            direct_scope = Path(self.scope_id)
+            if direct_scope.is_absolute() and direct_scope.is_dir():
+                scopes = [direct_scope.resolve()]
+            elif ("/" in self.scope_id or "\\" in self.scope_id) and (self.root / direct_scope).is_dir():
+                scopes = [(self.root / direct_scope).resolve()]
+            else:
+                scopes = [planning_root / self.scope_id]
+        else:
+            scopes = sorted(
+                path for path in planning_root.iterdir()
+                if path.is_dir() and not path.name.startswith((".", "templates", "pi-template", "sprint-template", "cycle-template", "kanban-template"))
+            )
         for scope in scopes:
             if not scope.is_dir():
                 self.add("ERROR", scope, f"Planning scope {scope.name} does not exist")

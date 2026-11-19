@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Workspace Doctor: Diagnostic & Environment Verification Utility."""
 
+from __future__ import annotations
+
 import json
 import os
 import shutil

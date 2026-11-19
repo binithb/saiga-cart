@@ -345,6 +345,12 @@ def resolve_scopes(root: Path, args: argparse.Namespace) -> list[Path]:
     if args.path:
         scope = args.path if args.path.is_absolute() else root / args.path
         return [scope.resolve()]
+    if args.scope:
+        direct_candidate = Path(args.scope)
+        if direct_candidate.is_absolute() and direct_candidate.is_dir():
+            return [direct_candidate.resolve()]
+        if ("/" in args.scope or "\\" in args.scope) and (root / direct_candidate).is_dir():
+            return [(root / direct_candidate).resolve()]
     for p_name in ("planning", "pi", "sprints", "cycles", "milestones"):
         p_root = root / "docs" / p_name
         if p_root.is_dir():

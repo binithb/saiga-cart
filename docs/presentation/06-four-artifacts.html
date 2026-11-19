@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Four categories of durable context that ground AI agents: reality, intent, reasons, and evidence, with useful repository paths.">
   <title>Four Artifacts · Reality, Intent, Reasons, Evidence</title>
+  <link rel="canonical" href="https://binithb.github.io/saiga-cart/06-four-artifacts.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="saiga-cart">
+  <meta property="og:title" content="Four Artifacts · Reality, Intent, Reasons, Evidence | saiga-cart">
+  <meta property="og:description" content="Four categories of durable context that ground AI agents: reality, intent, reasons, and evidence, with useful repository paths.">
+  <meta property="og:url" content="https://binithb.github.io/saiga-cart/06-four-artifacts.html">
+  <meta property="og:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Four Artifacts · Reality, Intent, Reasons, Evidence | saiga-cart">
+  <meta name="twitter:description" content="Four categories of durable context that ground AI agents: reality, intent, reasons, and evidence, with useful repository paths.">
+  <meta name="twitter:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta name="twitter:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -42,7 +57,7 @@
       <p class="lede">Reduce drift with four categories of durable context in git, not four literal files. Intent is a planning directory; decisions and evidence may span several files.</p>
       
       <div class="takeaway-box">
-        <div class="takeaway-icon">📁</div>
+        <div class="takeaway-icon" aria-hidden="true">📁</div>
         <div class="takeaway-content">
           <strong>The lightweight oversight contract:</strong> reality, intent, reasons, and evidence make clear what must be true before an agent implements. Nothing load-bearing should live only in chat scrollback or ephemeral memory.
         </div>
@@ -52,6 +67,67 @@
     <section aria-labelledby="artifacts-heading">
       <span class="section-label">The 4 Categories</span>
       <h2 id="artifacts-heading">What Earns a Place in the Repository</h2>
+
+      <figure class="diagram-box">
+        <div class="diagram-scroll" role="region" aria-label="Visual map of the four durable context artifacts" tabindex="0">
+          <svg viewBox="0 0 880 270" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fig6-title">
+            <title id="fig6-title">Diagram: Four categories of durable context anchoring AI execution</title>
+            <style>
+              .dg6-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+              .dg6-title { font-weight: 700; font-size: 14px; }
+              .dg6-badge { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; font-weight: 700; }
+              .dg6-path { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; font-weight: 600; }
+              .dg6-desc { font-size: 11px; fill: #475569; }
+            </style>
+
+            <!-- Central Hub -->
+            <rect x="325" y="95" width="230" height="80" rx="12" fill="#0f172a" stroke="#334155" stroke-width="2" />
+            <text x="440" y="124" text-anchor="middle" class="dg6-text" font-weight="700" font-size="13px" fill="#38bdf8">DURABLE CONTEXT IN GIT</text>
+            <text x="440" y="143" text-anchor="middle" class="dg6-text" font-size="11px" fill="#cbd5e1">AGENTS.md · Shared by</text>
+            <text x="440" y="159" text-anchor="middle" class="dg6-text" font-size="11px" fill="#cbd5e1">Engineers &amp; AI Agents</text>
+
+            <!-- Connecting dashed lines -->
+            <path d="M 280 65 L 325 115" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" />
+            <path d="M 600 65 L 555 115" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" />
+            <path d="M 280 205 L 325 155" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" />
+            <path d="M 600 205 L 555 155" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" />
+
+            <!-- Card 1: Reality -->
+            <rect x="20" y="15" width="260" height="100" rx="8" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.5" />
+            <rect x="32" y="27" width="82" height="20" rx="4" fill="#e0f2fe" />
+            <text x="73" y="41" text-anchor="middle" class="dg6-text dg6-badge" fill="#0369a1">01 · REALITY</text>
+            <text x="32" y="66" class="dg6-text dg6-title" fill="#0f172a">What Is True Now</text>
+            <text x="32" y="84" class="dg6-text dg6-desc">System contracts &amp; repo ownership</text>
+            <text x="32" y="101" class="dg6-text dg6-path" fill="#0369a1">docs/architecture.md</text>
+
+            <!-- Card 2: Intent -->
+            <rect x="600" y="15" width="260" height="100" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" />
+            <rect x="612" y="27" width="80" height="20" rx="4" fill="#dcfce7" />
+            <text x="652" y="41" text-anchor="middle" class="dg6-text dg6-badge" fill="#15803d">02 · INTENT</text>
+            <text x="612" y="66" class="dg6-text dg6-title" fill="#0f172a">What We Build Next</text>
+            <text x="612" y="84" class="dg6-text dg6-desc">Active sprint/PI, stories, DoR criteria</text>
+            <text x="612" y="101" class="dg6-text dg6-path" fill="#15803d">docs/planning/01/</text>
+
+            <!-- Card 3: Reasons -->
+            <rect x="20" y="155" width="260" height="100" rx="8" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5" />
+            <rect x="32" y="167" width="86" height="20" rx="4" fill="#fef3c7" />
+            <text x="75" y="181" text-anchor="middle" class="dg6-text dg6-badge" fill="#b45309">03 · REASONS</text>
+            <text x="32" y="206" class="dg6-text dg6-title" fill="#0f172a">Why We Chose It</text>
+            <text x="32" y="224" class="dg6-text dg6-desc">Append-only; stops settled debates</text>
+            <text x="32" y="241" class="dg6-text dg6-path" fill="#b45309">docs/adr/0001-*.md</text>
+
+            <!-- Card 4: Evidence -->
+            <rect x="600" y="155" width="260" height="100" rx="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5" />
+            <rect x="612" y="167" width="90" height="20" rx="4" fill="#f3e8ff" />
+            <text x="657" y="181" text-anchor="middle" class="dg6-text dg6-badge" fill="#7e22ce">04 · EVIDENCE</text>
+            <text x="612" y="206" class="dg6-text dg6-title" fill="#0f172a">What Counts as Done</text>
+            <text x="612" y="224" class="dg6-text dg6-desc">Test verification, linters &amp; DoD</text>
+            <text x="612" y="241" class="dg6-text dg6-path" fill="#7e22ce">docs/workflow.md + tests + PR</text>
+          </svg>
+        </div>
+        <figcaption class="diagram-caption">Figure 6.1: The four durable context pillars anchoring autonomous execution in git</figcaption>
+      </figure>
+
       <div class="grid">
         <article class="card span-6">
           <span class="card-number">01 · Reality</span>
@@ -83,11 +159,9 @@
       </div>
     </section>
 
-    <section aria-labelledby="hygiene-heading">
-      <div class="callout success">
-        <h3 id="hygiene-heading">Documentation Hygiene Rule</h3>
-        <p>Keep context concise and current. Stale guidance can misdirect the next session. If a statement stops being true, update or remove it in the same PR; preserve decision history through superseding ADRs.</p>
-      </div>
+    <section class="callout success" aria-labelledby="hygiene-heading">
+      <h2 id="hygiene-heading">Documentation Hygiene Rule</h2>
+      <p>Keep context concise and current. Stale guidance can misdirect the next session. If a statement stops being true, update or remove it in the same PR; preserve decision history through superseding ADRs.</p>
     </section>
 
     <nav class="page-nav" aria-label="Page navigation">

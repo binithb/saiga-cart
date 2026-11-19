@@ -182,7 +182,9 @@ def cmd_graduate(args: argparse.Namespace) -> int:
 
     target_rel = args.target.strip()
     target_path = (root / target_rel).resolve()
-    if not target_path.is_relative_to(root):
+    try:
+        target_path.relative_to(root)
+    except ValueError:
         print(f"ERROR: Graduation target must be inside workspace root: {target_rel}", file=sys.stderr)
         return 1
     if not target_path.exists():

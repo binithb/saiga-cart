@@ -4,6 +4,7 @@ This repository uses a multi-repository, AI-native workspace pattern.
 
 ## Core Rules
 - Read `AGENTS.md`, `docs/workflow.md`, and `docs/architecture.md` for workspace conventions.
+- Consult `.github/skills/README.md` for task-specific workflows (e.g. `add-sibling`, `planning-scaffold`, `story-refiner`, `pr-create`).
 - Planning source of truth is under `docs/planning/`.
 - Maintain strict separation between remote issue trackers and local story markdown files.
 - Before implementing a story, verify it has `Definition of Ready | Done` and `Effort | Small` or `Medium`.

@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A nine-page guide to shared context, bounded AI delegation, and evidence-led software delivery with saiga-cart.">
   <title>Start · Scaling AI in Real Software</title>
+  <link rel="canonical" href="https://binithb.github.io/saiga-cart/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="saiga-cart">
+  <meta property="og:title" content="Start · Scaling AI in Real Software | saiga-cart">
+  <meta property="og:description" content="A nine-page guide to shared context, bounded AI delegation, and evidence-led software delivery with saiga-cart.">
+  <meta property="og:url" content="https://binithb.github.io/saiga-cart/">
+  <meta property="og:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Start · Scaling AI in Real Software | saiga-cart">
+  <meta name="twitter:description" content="A nine-page guide to shared context, bounded AI delegation, and evidence-led software delivery with saiga-cart.">
+  <meta name="twitter:image" content="https://binithb.github.io/saiga-cart/assets/og-banner.png">
+  <meta name="twitter:image:alt" content="saiga-cart: Scaling AI in Multi-Repository Software">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/nav.js" defer></script>
@@ -48,23 +63,67 @@
       </div>
     </header>
 
+    <section class="quickstart-preview" aria-labelledby="quickstart-heading">
+      <span class="section-label">Bridge Philosophy to Code</span>
+      <h2 id="quickstart-heading">Try It in 30 Seconds</h2>
+      <div class="quickstart-grid">
+        <div class="terminal-card">
+          <div class="terminal-bar">
+            <span class="dot red" aria-hidden="true"></span>
+            <span class="dot yellow" aria-hidden="true"></span>
+            <span class="dot green" aria-hidden="true"></span>
+            <span class="terminal-title">bash — bootstrap workspace</span>
+          </div>
+          <div class="terminal-body" role="region" aria-label="Quickstart terminal commands" tabindex="0">
+            <pre><code><span class="t-comment"># 1. Clone saiga-cart &amp; generate a multi-repo AI workspace</span>
+<span class="t-prompt">$ </span>git clone https://github.com/binithb/saiga-cart.git &amp;&amp; cd saiga-cart
+<span class="t-prompt">$ </span>python bootstrap.py --preset github-scrum --output ../my-ai-workspace
+
+<span class="t-comment"># 2. Open unified multi-root workspace in VS Code or Cursor</span>
+<span class="t-prompt">$ </span>cd ../my-ai-workspace &amp;&amp; code my-ai-workspace.code-workspace
+
+<span class="t-comment"># 3. In AI Chat (Copilot / Claude / Cursor): add your first service</span>
+<span class="t-prompt">&gt; </span>/add-sibling https://github.com/my-org/payment-service.git</code></pre>
+          </div>
+        </div>
+        <div class="workspace-card">
+          <div class="terminal-bar">
+            <span class="dot red" aria-hidden="true"></span>
+            <span class="dot yellow" aria-hidden="true"></span>
+            <span class="dot green" aria-hidden="true"></span>
+            <span class="terminal-title">Multi-Root Workspace (.code-workspace)</span>
+          </div>
+          <div class="terminal-body" role="region" aria-label="Multi-root workspace directory layout" tabindex="0">
+            <pre><code><span class="tree-root">my-ai-workspace/</span>               <span class="t-dim"># Orchestrator &amp; context hub</span>
+├── <strong>AGENTS.md</strong>                  <span class="t-dim"># Shared AI rules &amp; boundaries</span>
+├── <strong>docs/architecture.md</strong>       <span class="t-dim"># Reality: cross-repo contracts</span>
+├── <strong>docs/planning/01/</strong>          <span class="t-dim"># Intent: sprint / PI &amp; stories</span>
+├── <strong>docs/adr/</strong>                  <span class="t-dim"># Reasons: decision records</span>
+└── <strong>docs/workflow.md</strong>           <span class="t-dim"># Evidence: DoR, DoD &amp; proofs</span>
+<span class="tree-root">payment-service/</span>               <span class="t-dim"># Sibling repo (../payment-service)</span>
+<span class="tree-root">web-frontend/</span>                  <span class="t-dim"># Sibling repo (../web-frontend)</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section aria-labelledby="roadmap-title">
       <span class="section-label">Nine pages, three phases</span>
       <h2 id="roadmap-title">From Friction to a Working Practice</h2>
       <div class="grid">
         <article class="card span-4">
           <span class="card-number">01 · Understand</span>
-          <h3>Find the Friction</h3>
+          <h3><a href="01-problem.html">Find the Friction</a></h3>
           <p>Recognize drift and the context tax, then see why fast generation moves oversight upstream.</p>
         </article>
         <article class="card span-4">
           <span class="card-number">02 · Equip</span>
-          <h3>Make Context Durable</h3>
+          <h3><a href="05-modes.html">Make Context Durable</a></h3>
           <p>Match the operating mode to the task. Keep reality, intent, reasons, and evidence in git beside the implementation.</p>
         </article>
         <article class="card span-4">
           <span class="card-number">03 · Practice</span>
-          <h3>Delegate and Learn</h3>
+          <h3><a href="08-roles.html">Delegate and Learn</a></h3>
           <p>Give humans and agents clear responsibilities, then pilot the workflow and measure whether it helps.</p>
         </article>
       </div>

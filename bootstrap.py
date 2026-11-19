@@ -2288,6 +2288,10 @@ def main() -> None:
             raise SystemExit(2)
     elif args.preset or args.non_interactive:
         cfg = build_preset_config(args.preset or "github-scrum")
+        if explicit_output and explicit_output != source_dir:
+            derived_slug = re.sub(r"[^a-z0-9]+", "-", explicit_output.name.lower()).strip("-")
+            if derived_slug:
+                cfg.slug = derived_slug
         try:
             output = prepare_output_directory(source_dir, target_dir)
         except ValueError as error:

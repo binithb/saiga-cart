@@ -31,6 +31,8 @@ A story is DoR `Done` only when:
 1. **Baseline Assessment**:
    ```bash
    python3 .github/skills/story-refiner/scripts/story_readiness.py --scope <scope>
+   # or pass an explicit directory path:
+   python3 .github/skills/story-refiner/scripts/story_readiness.py --path docs/planning/<scope>/
    ```
 2. **Derive Technical Facts from Code First**:
    - Inspect target sibling repositories, schemas, configs, and existing tests before asking the user. Never ask the user a question that the repository code already answers.

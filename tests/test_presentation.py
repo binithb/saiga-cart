@@ -176,10 +176,16 @@ class PresentationTests(unittest.TestCase):
                             continue
                         url = urlsplit(node.attrs[attr])
                         if url.scheme or url.netloc:
-                            self.assertNotIn(node.tag, ("script", "link", "img"), "External asset dependency")
+                            if not (node.tag == "link" and node.attrs.get("rel") == "canonical"):
+                                self.assertNotIn(node.tag, ("script", "link", "img"), "External asset dependency")
                             continue
                         target = (DECK / unquote(url.path)).resolve() if url.path else DECK / filename
-                        self.assertTrue(target.is_relative_to(DECK), "Link escapes deployed Pages directory")
+                        try:
+                            target.relative_to(DECK.resolve())
+                            inside_deck = True
+                        except ValueError:
+                            inside_deck = False
+                        self.assertTrue(inside_deck, "Link escapes deployed Pages directory")
                         self.assertTrue(target.is_file(), f"Missing target: {node.attrs[attr]}")
                         if url.fragment:
                             linked = self.docs[target.name]
@@ -218,6 +224,68 @@ class PresentationTests(unittest.TestCase):
                 self.assertIn(dimension, card.text)
         self.assertTrue(any("youtu.be/h0hdaHPKDdI" in link.attrs.get("href", "")
                             for link in shift.by_tag("a")))
+
+    def test_social_metadata_uses_raster_banner_and_consistent_titles(self):
+        primary_pages = [name for name, _ in PAGES] + ["ai-agile-manifesto.html"]
+        pages_prefix = "https://binithb.github.io/saiga-cart/"
+        for filename in primary_pages:
+            with self.subTest(page=filename):
+                doc = self.docs[filename]
+                metas = {
+                    node.attrs.get("property") or node.attrs.get("name"): node.attrs.get("content", "")
+                    for node in doc.by_tag("meta")
+                }
+                expected_url = pages_prefix if filename == "index.html" else pages_prefix + filename
+                canonical, = [node for node in doc.by_tag("link")
+                              if node.attrs.get("rel") == "canonical"]
+                self.assertEqual(canonical.attrs.get("href"), expected_url)
+                self.assertEqual(metas.get("og:url"), expected_url)
+                self.assertTrue(metas.get("og:title", "").endswith("| saiga-cart"))
+                self.assertEqual(metas.get("og:title"), metas.get("twitter:title"))
+                self.assertEqual(metas.get("twitter:card"), "summary_large_image")
+                self.assertTrue(metas.get("og:image:alt"))
+                self.assertEqual(metas.get("og:image:alt"), metas.get("twitter:image:alt"))
+                for image_key in ("og:image", "twitter:image"):
+                    image_url = metas.get(image_key, "")
+                    self.assertTrue(image_url.startswith(pages_prefix + "assets/"))
+                    self.assertRegex(image_url, r"\.(png|jpg|jpeg|webp)$")
+                    asset_rel = image_url[len(pages_prefix):]
+                    self.assertTrue((DECK / asset_rel).is_file(), f"Missing social image: {asset_rel}")
+
+    def test_inline_diagrams_avoid_svg_attribute_and_css_fill_collisions(self):
+        for filename in ("05-modes.html", "06-four-artifacts.html", "08-roles.html"):
+            with self.subTest(page=filename):
+                doc = self.docs[filename]
+                figures = doc.by_class("diagram-box")
+                self.assertEqual(len(figures), 1)
+                self.assertEqual(figures[0].tag, "figure")
+                regions = [n for n in doc.by_class("diagram-scroll") if n.inside(figures[0])]
+                self.assertEqual(len(regions), 1)
+                self.assertEqual(regions[0].attrs.get("role"), "region")
+                self.assertEqual(regions[0].attrs.get("tabindex"), "0")
+                svg, = [n for n in doc.by_tag("svg") if n.inside(regions[0])]
+                self.assertNotEqual(svg.attrs.get("height"), "auto")
+                styles = "\n".join(s.text for s in doc.by_tag("style") if s.inside(svg))
+                fill_classes = set(re.findall(r"\.([\w-]+)\s*\{[^}]*\bfill\s*:", styles))
+                for elem in doc.nodes:
+                    if elem.inside(svg) and "fill" in elem.attrs:
+                        elem_classes = set(elem.attrs.get("class", "").split())
+                        self.assertFalse(
+                            elem_classes & fill_classes,
+                            f"CSS class fill overrides presentation fill on <{elem.tag}> in {filename}",
+                        )
+
+    def test_quickstart_and_banner_match_repository_reality(self):
+        index_text = self.docs["index.html"].by_class("quickstart-preview")[0].text
+        self.assertIn("--preset github-scrum --output ../my-ai-workspace", index_text)
+        self.assertIn("code my-ai-workspace.code-workspace", index_text)
+        self.assertNotIn("saiga-cart.code-workspace", index_text)
+        real_skills = {p.name for p in (ROOT / ".github" / "skills").iterdir() if p.is_dir()}
+        banner_svg = (DECK / "assets" / "saiga-cart-banner.svg").read_text(encoding="utf-8")
+        banner_skills = re.findall(r'font-family="monospace"[^>]*>([a-z0-9-]+)</text>', banner_svg)
+        self.assertEqual(len(banner_skills), 6)
+        self.assertTrue(set(banner_skills).issubset(real_skills),
+                        f"Banner references unknown skills: {set(banner_skills) - real_skills}")
 
 
 if __name__ == "__main__":

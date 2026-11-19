@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+import argparse
 import tempfile
 import unittest
 from pathlib import Path
 
-from story_readiness import collect_stories, build_report
+from story_readiness import collect_stories, build_report, resolve_scopes
 
 
 class TestStoryReadiness(unittest.TestCase):
@@ -47,6 +48,16 @@ class TestStoryReadiness(unittest.TestCase):
         self.assertEqual(len(report["queue"]), 2)
         self.assertEqual(report["queue"][0]["availability"], "Needs tracker onboarding")
         self.assertEqual(report["queue"][1]["availability"], "Available now")
+
+    def test_resolve_scopes_accepts_scope_id_and_relative_path(self):
+        scope_dir = self.root / "docs" / "planning" / "01"
+        scope_dir.mkdir(parents=True)
+
+        by_id = resolve_scopes(self.root, argparse.Namespace(scope="01", path=None))
+        by_rel_path = resolve_scopes(self.root, argparse.Namespace(scope="docs/planning/01/", path=None))
+
+        self.assertEqual(by_id, [scope_dir.resolve()])
+        self.assertEqual(by_rel_path, [scope_dir.resolve()])
 
 
 if __name__ == "__main__":
