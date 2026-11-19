@@ -238,8 +238,120 @@ def write_env_vars(env_path: Path, updates: dict[str, str]) -> None:
         os.environ[key] = val
 
 
+def infer_ado_details_from_repo_url(raw_url: str) -> tuple[str, str, str] | None:
+    """Infer (org, project, https_base_url) from any Azure DevOps SSH or HTTPS repo URL."""
+    cleaned = raw_url.strip().strip("'\"")
+    if cleaned.lower().startswith("git clone "):
+        cleaned = cleaned[len("git clone "):].strip()
+
+    # 1. SCP-style SSH: git@ssh.dev.azure.com:v3/<org>/<project>/<repo>
+    m_scp = re.match(
+        r"^(?:[^@]+@)?ssh\.dev\.azure\.com:v3/([^/]+)/([^/]+)/([^/\s]+?)(?:\.git)?/?$",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if m_scp:
+        org = urllib.parse.unquote(m_scp.group(1))
+        project = urllib.parse.unquote(m_scp.group(2))
+        base_url = f"https://dev.azure.com/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+        return org, project, base_url
+
+    # 2. Legacy visualstudio.com SCP SSH: <org>@vs-ssh.visualstudio.com:v3/<org>/<project>/<repo>
+    m_vs_scp = re.match(
+        r"^(?:[^@]+@)?vs-ssh\.visualstudio\.com:v3/([^/]+)/([^/]+)/([^/\s]+?)(?:\.git)?/?$",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if m_vs_scp:
+        org = urllib.parse.unquote(m_vs_scp.group(1))
+        project = urllib.parse.unquote(m_vs_scp.group(2))
+        base_url = f"https://dev.azure.com/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+        return org, project, base_url
+
+    # 3. ssh:// or https:// URLs
+    if "://" in cleaned:
+        parsed = urllib.parse.urlsplit(cleaned)
+        host = parsed.netloc.split("@")[-1].split(":")[0].lower()
+        segs = [urllib.parse.unquote(s) for s in parsed.path.split("/") if s]
+
+        if host == "ssh.dev.azure.com" and len(segs) >= 3 and segs[0].lower() == "v3":
+            org, project = segs[1], segs[2]
+            base_url = f"https://dev.azure.com/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+            return org, project, base_url
+
+        if host == "vs-ssh.visualstudio.com" and len(segs) >= 3 and segs[0].lower() == "v3":
+            org, project = segs[1], segs[2]
+            base_url = f"https://dev.azure.com/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+            return org, project, base_url
+
+        if host == "dev.azure.com" and len(segs) >= 2:
+            org = segs[0]
+            project = segs[1]
+            if not project.startswith("_"):
+                base_url = f"https://dev.azure.com/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+                return org, project, base_url
+
+        if host.endswith(".visualstudio.com") and len(segs) >= 1:
+            org = host[: -len(".visualstudio.com")]
+            if segs[0].lower() == "defaultcollection" and len(segs) >= 2:
+                project = segs[1]
+            else:
+                project = segs[0]
+            if not project.startswith("_"):
+                base_url = f"https://{host}/{urllib.parse.quote(project)}"
+                return org, project, base_url
+
+    return None
+
+
+def infer_vcs_and_tracker_from_repo_url(raw_url: str) -> tuple[str, str, str, str] | None:
+    """Infer (vcs_platform, suggested_tracker_type, org, tracker_base_url) from a Git repository URL."""
+    inferred_ado = infer_ado_details_from_repo_url(raw_url)
+    if inferred_ado is not None:
+        org, _proj, base_url = inferred_ado
+        return "azure-repos", "azure-devops", org, base_url
+
+    cleaned = normalize_git_repo_url(raw_url)
+    # SCP-style SSH: git@<host>:<owner>/<repo>.git
+    m_scp = re.match(r"^(?:[^@]+@)?([^:/]+):([^/]+)/([^/\s]+?)(?:\.git)?/?$", cleaned)
+    host = ""
+    owner = ""
+    repo = ""
+    if m_scp:
+        host = m_scp.group(1).lower()
+        owner = urllib.parse.unquote(m_scp.group(2))
+        repo = urllib.parse.unquote(m_scp.group(3))
+    elif "://" in cleaned:
+        parsed = urllib.parse.urlsplit(cleaned)
+        host = parsed.netloc.split("@")[-1].split(":")[0].lower()
+        segs = [urllib.parse.unquote(s) for s in parsed.path.split("/") if s]
+        if len(segs) >= 2:
+            owner = segs[0]
+            repo = segs[-1]
+            if repo.endswith(".git"):
+                repo = repo[:-4]
+
+    if not host:
+        return None
+    if "github" in host:
+        base_url = f"https://{host}/{owner}/{repo}" if owner and repo else f"https://{host}"
+        return "github", "github", owner, base_url
+    if "gitlab" in host:
+        base_url = f"https://{host}/{owner}/{repo}" if owner and repo else f"https://{host}"
+        return "gitlab", "gitlab", owner, base_url
+    if "bitbucket" in host:
+        base_url = f"https://{host}/{owner}/{repo}" if owner and repo else f"https://{host}"
+        return "bitbucket", "jira", owner, base_url
+    return None
+
+
 def normalize_ado_base_and_project(raw_url: str, fallback_org: str, fallback_project: str) -> tuple[str, str]:
     """Normalize an Azure DevOps URL into (base_url, project_key) and strip browser suffixes."""
+    inferred = infer_ado_details_from_repo_url(raw_url)
+    if inferred is not None:
+        _org, proj, base = inferred
+        return base, proj
+
     cleaned = raw_url.strip().rstrip("/")
     if not cleaned:
         return f"https://dev.azure.com/{fallback_org}/{fallback_project}", fallback_project
@@ -249,7 +361,7 @@ def normalize_ado_base_and_project(raw_url: str, fallback_org: str, fallback_pro
         cleaned = "https://" + cleaned.lstrip("/")
 
     parsed = urllib.parse.urlsplit(cleaned)
-    host = parsed.netloc.lower()
+    host = parsed.netloc.split("@")[-1].lower()
     segments = [urllib.parse.unquote(s) for s in parsed.path.split("/") if s]
     # Strip trailing repo/board segments like _git, _boards, _workitems, _apis
     filtered: list[str] = []
@@ -260,13 +372,13 @@ def normalize_ado_base_and_project(raw_url: str, fallback_org: str, fallback_pro
 
     if host.endswith(".visualstudio.com"):
         project = filtered[0] if filtered else fallback_project
-        base = f"{parsed.scheme}://{parsed.netloc}/{urllib.parse.quote(project)}"
+        base = f"{parsed.scheme}://{host}/{urllib.parse.quote(project)}"
         return base, project
 
     if host == "dev.azure.com" or "azure" in host:
         org = filtered[0] if len(filtered) >= 1 else fallback_org
         project = filtered[1] if len(filtered) >= 2 else fallback_project
-        base = f"{parsed.scheme}://{parsed.netloc}/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
+        base = f"{parsed.scheme}://{host}/{urllib.parse.quote(org)}/{urllib.parse.quote(project)}"
         return base, project
 
     project = filtered[-1] if filtered else fallback_project
@@ -637,7 +749,9 @@ def run_interactive_auth_setup(cfg: WorkspaceConfig, root: Path) -> None:
                             print(f"  {YELLOW}Token cannot be empty.{RESET}")
                     updates["GITHUB_TOKEN"] = tok
                 elif provider == "gitlab":
-                    gl_url = cfg.tracker_base_url if cfg.tracker_type == "gitlab" else "https://gitlab.com"
+                    gl_url = os.environ.get("GITLAB_BASE_URL") or (
+                        cfg.tracker_base_url if cfg.tracker_type == "gitlab" else "https://gitlab.com"
+                    )
                     print(f"  {DIM}Create PAT at: {gl_url.rstrip('/')}/-/user_settings/personal_access_tokens (scope: api){RESET}")
                     updates["GITLAB_BASE_URL"] = gl_url
                     tok = ""
@@ -711,6 +825,36 @@ def prompt_and_verify_siblings(cfg: WorkspaceConfig) -> list[SiblingRepo]:
             if ok:
                 print(f"  {GREEN}✔{RESET} {msg}")
                 verified_url = candidate_url
+                inferred_ado = infer_ado_details_from_repo_url(verified_url)
+                if inferred_ado is not None:
+                    inf_org, inf_proj, inf_base = inferred_ado
+                    if cfg.vcs_platform != "azure-repos":
+                        cfg.vcs_platform = "azure-repos"
+                    if cfg.tracker_type not in ("azure-devops", "jira", "none") or (
+                        not cfg.tracker_base_url
+                        or "acme-org" in cfg.tracker_base_url
+                        or "acme-corp" in cfg.tracker_base_url
+                        or cfg.tracker_base_url.endswith("/project")
+                    ):
+                        cfg.tracker_type = "azure-devops"
+                        cfg.org = inf_org
+                        cfg.tracker_project_key = inf_proj
+                        cfg.tracker_base_url = inf_base
+                        print(
+                            f"  {CYAN}ℹ{RESET} Inferred Azure DevOps tracker & base URL from repository: "
+                            f"{BOLD}{cfg.tracker_base_url}{RESET} (org: {cfg.org}, project: {cfg.tracker_project_key})"
+                        )
+                else:
+                    inferred_vcs = infer_vcs_and_tracker_from_repo_url(verified_url)
+                    if inferred_vcs is not None:
+                        inf_vcs, inf_tracker, inf_org, inf_base = inferred_vcs
+                        if not cfg.tracker_base_url or "acme-corp" in cfg.tracker_base_url or "acme-org" in cfg.tracker_base_url:
+                            cfg.vcs_platform = inf_vcs
+                            if cfg.tracker_type == "github" and inf_tracker != "github":
+                                cfg.tracker_type = inf_tracker
+                            if inf_org and cfg.org in ("acme-corp", "acme-org"):
+                                cfg.org = inf_org
+                            cfg.tracker_base_url = inf_base
                 break
 
             print(f"  {YELLOW}✖ Repository URL check failed:{RESET} {msg}")
@@ -833,10 +977,21 @@ def run_interactive_wizard(
         cfg.tracker_base_url = prompt_text("GitLab Group / Project URL", f"https://gitlab.com/{cfg.org}/main-repo")
         print(f"  {DIM}ℹ Note: GitLab integration uses GITLAB_TOKEN (scope: api) in .env.gitlab / .env.local or 'glab auth login'{RESET}")
     elif cfg.tracker_type == "azure-devops":
-        raw_ado_url = prompt_text("Azure DevOps Organization or Project URL", f"https://dev.azure.com/{cfg.org}/project")
-        norm_base, inferred_proj = normalize_ado_base_and_project(raw_ado_url, cfg.org, "project")
-        cfg.tracker_project_key = prompt_text("Azure DevOps Project Name / Key", inferred_proj)
-        cfg.tracker_base_url, _ = normalize_ado_base_and_project(norm_base, cfg.org, cfg.tracker_project_key)
+        raw_ado_url = prompt_text(
+            "Azure DevOps Project/Repo URL (or leave default to auto-infer from your first sibling repo URL)",
+            f"https://dev.azure.com/{cfg.org}/project",
+        )
+        inferred_ado = infer_ado_details_from_repo_url(raw_ado_url)
+        if inferred_ado is not None:
+            cfg.org, cfg.tracker_project_key, cfg.tracker_base_url = inferred_ado
+            print(
+                f"  {GREEN}✔{RESET} Inferred Azure DevOps project: {BOLD}{cfg.tracker_base_url}{RESET} "
+                f"(org: {cfg.org}, project: {cfg.tracker_project_key})"
+            )
+        else:
+            norm_base, inferred_proj = normalize_ado_base_and_project(raw_ado_url, cfg.org, "project")
+            cfg.tracker_project_key = prompt_text("Azure DevOps Project Name / Key", inferred_proj)
+            cfg.tracker_base_url, _ = normalize_ado_base_and_project(norm_base, cfg.org, cfg.tracker_project_key)
         print(f"  {DIM}ℹ Note: Azure DevOps integration uses AZURE_DEVOPS_EXT_PAT (Work Items & Code Read/Write) in .env.azure / .env.local or 'az devops login'{RESET}")
 
     print(f"\n{BLUE}{BOLD}--- Section 4: Version Control & Code Reviews ---{RESET}")
@@ -1572,7 +1727,7 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
         f"  {BOLD}1. Verify & Open Your Unified Workspace:{RESET}",
         f"     • Clone sibling repos : {CYAN}{py_cmd} scripts/clone_siblings.py{RESET}",
         f"     • Health diagnostics  : {CYAN}{py_cmd} scripts/workspace_doctor.py{RESET}",
-        f"     • Add repos anytime   : {CYAN}{py_cmd} bootstrap.py --add-sibling{RESET}",
+        f"     • Add repos anytime   : {CYAN}/add-sibling <git-url>{RESET} (in AI chat) or {CYAN}{py_cmd} bootstrap.py --add-sibling{RESET}",
         f"     • Open multi-root IDE : {CYAN}code {cfg.slug}.code-workspace{RESET}",
         "",
         f"  {BOLD}2. How the Two-Mode AI Workflow Operates (AGENTS.md):{RESET}",
@@ -1584,6 +1739,7 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
         f"       {CYAN}GLOSSARY.md{RESET} updated as system contracts evolve.",
         "",
         f"  {BOLD}3. Try These First Prompts in Your AI Assistant (Copilot / Claude / Cursor):{RESET}",
+        f"     • {CYAN}\"/add-sibling <git-repo-url>\"{RESET} (inspects repo, asks for intent, and remaps AGENTS.md & architecture.md)",
         f"     • {CYAN}\"Use planning-scaffold to create our first epic and story in docs/planning/01/\"{RESET}",
         f"     • {CYAN}\"Run story-refiner on docs/planning/01/ to check Definition of Ready and sizing\"{RESET}",
     ]
@@ -1625,6 +1781,18 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
         siblings_yaml_lines.append("  []")
     siblings_yaml_list = "\n".join(siblings_yaml_lines)
 
+    tracker_skills_map = {
+        "jira": "`jira-story-onboard`, `jira-status-sync`",
+        "github": "`github-issue-onboard`, `github-status-sync`",
+        "gitlab": "`gitlab-issue-onboard`",
+        "azure-devops": "`ado-work-item-onboard`",
+        "none": "*(Local markdown only — no external issue tracker skills enabled)*",
+    }
+    tracker_skills_list = tracker_skills_map.get(
+        cfg.tracker_type,
+        "`jira-story-onboard`, `jira-status-sync`, `github-issue-onboard`, `github-status-sync`, `gitlab-issue-onboard`, `ado-work-item-onboard`",
+    )
+
     context = {
         "WORKSPACE_NAME": cfg.name,
         "WORKSPACE_SLUG": cfg.slug,
@@ -1638,6 +1806,7 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
         "TRACKER_NAME": cfg.tracker_type.capitalize(),
         "TRACKER_BASE_URL": cfg.tracker_base_url,
         "TRACKER_PROJECT_KEY": cfg.tracker_project_key,
+        "TRACKER_SKILLS_LIST": tracker_skills_list,
         "VCS_PLATFORM": cfg.vcs_platform,
         "SIBLING_REPOS_SECTION": siblings_agents_md or "*(No sibling repositories configured yet)*",
         "CODE_WORKSPACE_SIBLINGS": code_workspace_entries,
@@ -1655,7 +1824,9 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
             print(f"  ✔ Created {dest_name}")
 
     render_file("AGENTS.md.template", "AGENTS.md")
-    render_file("GLOSSARY.md.template", "GLOSSARY.md")
+    glossary_dest = root / "GLOSSARY.md"
+    if not glossary_dest.exists() or "{{" in glossary_dest.read_text(encoding="utf-8"):
+        render_file("GLOSSARY.md.template", "GLOSSARY.md")
     render_file("workspace.code-workspace.template", f"{cfg.slug}.code-workspace")
     (root / "workspace.yaml").write_text(render_workspace_config(cfg), encoding="utf-8")
     print("  Created workspace.yaml")
@@ -1706,6 +1877,26 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     # 6. Prune irrelevant skill directories if requested
     skills_dir = root / ".github" / "skills"
     if skills_dir.is_dir():
+        all_tracker_skills = (
+            "jira-story-onboard",
+            "jira-status-sync",
+            "github-issue-onboard",
+            "github-status-sync",
+            "gitlab-issue-onboard",
+            "ado-work-item-onboard",
+        )
+        tracker_cache_dir = skills_dir / ".tracker-templates"
+        tracker_cache_dir.mkdir(exist_ok=True)
+        skills_readme = skills_dir / "README.md"
+        cached_readme = tracker_cache_dir / "README.md"
+        if skills_readme.is_file() and not cached_readme.is_file():
+            shutil.copy2(skills_readme, cached_readme)
+        for t_skill in all_tracker_skills:
+            src_t = skills_dir / t_skill
+            dst_t = tracker_cache_dir / t_skill
+            if src_t.is_dir() and not dst_t.exists():
+                shutil.copytree(src_t, dst_t)
+
         if cfg.tracker_type != "jira":
             for d in ("jira-story-onboard", "jira-status-sync"):
                 p = skills_dir / d
@@ -1725,16 +1916,33 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
             if p.exists():
                 shutil.rmtree(p)
 
+        # Restore any missing skill for the active tracker_type from the local cache or template source
+        required_tracker_skills: dict[str, tuple[str, ...]] = {
+            "jira": ("jira-story-onboard", "jira-status-sync"),
+            "github": ("github-issue-onboard", "github-status-sync"),
+            "gitlab": ("gitlab-issue-onboard",),
+            "azure-devops": ("ado-work-item-onboard",),
+        }
+        source_skills_dir = Path(__file__).resolve().parent / ".github" / "skills"
+        for skill_name in required_tracker_skills.get(cfg.tracker_type, ()):
+            dest_skill = skills_dir / skill_name
+            if not dest_skill.exists():
+                for candidate_parent in (tracker_cache_dir, source_skills_dir):
+                    src_skill = candidate_parent / skill_name
+                    if src_skill.is_dir() and src_skill.resolve() != dest_skill.resolve():
+                        shutil.copytree(src_skill, dest_skill)
+                        break
+
         # Keep .github/skills/README.md and AGENTS.md skill routing synchronized with retained skills
         active_skill_names = {
             entry.name
             for entry in skills_dir.iterdir()
             if entry.is_dir() and not entry.name.startswith(".")
         }
-        skills_readme = skills_dir / "README.md"
-        if skills_readme.is_file():
+        readme_source = cached_readme if cached_readme.is_file() else skills_readme
+        if readme_source.is_file():
             filtered_lines = []
-            for line in skills_readme.read_text(encoding="utf-8").splitlines():
+            for line in readme_source.read_text(encoding="utf-8").splitlines():
                 m_skill = re.search(r"\[([A-Za-z0-9_.-]+)\]\(\1/SKILL\.md\)", line)
                 if m_skill and m_skill.group(1) not in active_skill_names:
                     continue
@@ -1765,20 +1973,23 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
                 }
                 repos_map[cfg.slug] = default_spec
                 for s in cfg.siblings:
-                    if s.access != "read-only" and s.name not in repos_map:
-                        repos_map[s.name] = {
-                            "domain": s.role or f"Sibling repository {s.name}",
-                            "default_verifier": "git status -sb",
-                            "verifier_paths": ["README.md"],
-                            "inv_levers": [
-                                f"Preserve cross-repository contracts with {cfg.slug}.",
-                                "Verify API/schema backward compatibility and error handling.",
-                            ],
-                            "dom_levers": [
-                                f"Follow idiomatic module boundaries and existing test patterns in {s.name}.",
-                                "Run targeted unit tests before proposing cross-repo changes.",
-                            ],
-                        }
+                    if s.access != "read-only":
+                        if s.name not in repos_map:
+                            repos_map[s.name] = {
+                                "domain": s.role or f"Sibling repository {s.name}",
+                                "default_verifier": "git status -sb",
+                                "verifier_paths": ["README.md"],
+                                "inv_levers": [
+                                    f"Preserve cross-repository contracts with {cfg.slug}.",
+                                    "Verify API/schema backward compatibility and error handling.",
+                                ],
+                                "dom_levers": [
+                                    f"Follow idiomatic module boundaries and existing test patterns in {s.name}.",
+                                    "Run targeted unit tests before proposing cross-repo changes.",
+                                ],
+                            }
+                        elif s.role:
+                            repos_map[s.name]["domain"] = s.role
                 profiles_path.write_text(json.dumps(profiles_data, indent=2) + "\n", encoding="utf-8")
             except Exception:
                 pass
@@ -1808,6 +2019,121 @@ def prepare_output_directory(source: Path, target: Path) -> Path:
     return target
 
 
+def upsert_sibling_non_interactive(
+    cfg: WorkspaceConfig,
+    *,
+    sibling_url: str | None,
+    sibling_name: str | None,
+    sibling_role: str | None,
+    sibling_access: str | None,
+    tracker_type: str | None = None,
+    tracker_base_url: str | None = None,
+    tracker_project_key: str | None = None,
+    skip_verify: bool = False,
+) -> SiblingRepo:
+    """Add or update a sibling repository non-interactively (used by the add-sibling skill and CLI)."""
+    existing: SiblingRepo | None = None
+    norm_url = normalize_git_repo_url(sibling_url) if sibling_url else ""
+
+    if sibling_name:
+        for s in cfg.siblings:
+            if s.name.lower() == sibling_name.strip().lower():
+                existing = s
+                break
+    if existing is None and norm_url:
+        for s in cfg.siblings:
+            if s.url.lower() == norm_url.lower():
+                existing = s
+                break
+
+    if not norm_url and existing is not None:
+        norm_url = existing.url
+    if not norm_url:
+        raise ValueError("Must provide --sibling-url (or an existing --sibling-name to update).")
+
+    if not skip_verify:
+        ok, msg = verify_git_repo_url(norm_url)
+        if not ok:
+            raise ValueError(f"Repository URL verification failed for '{norm_url}': {msg}")
+        print(f"  {GREEN}✔{RESET} {msg}")
+
+    if tracker_type:
+        cfg.tracker_type = tracker_type
+    if tracker_base_url:
+        cfg.tracker_base_url = tracker_base_url
+    if tracker_project_key:
+        cfg.tracker_project_key = tracker_project_key
+
+    inferred_ado = infer_ado_details_from_repo_url(norm_url)
+    if inferred_ado is not None:
+        inf_org, inf_proj, inf_base = inferred_ado
+        cfg.vcs_platform = "azure-repos"
+        if not tracker_type and (
+            cfg.tracker_type == "azure-devops"
+            or not cfg.tracker_base_url
+            or "acme-org" in cfg.tracker_base_url
+            or "acme-corp" in cfg.tracker_base_url
+            or cfg.tracker_base_url.endswith("/project")
+        ):
+            cfg.tracker_type = "azure-devops"
+            cfg.org = inf_org
+            if not tracker_project_key:
+                cfg.tracker_project_key = inf_proj
+            if not tracker_base_url:
+                cfg.tracker_base_url = inf_base
+            print(
+                f"  {CYAN}ℹ{RESET} Inferred Azure DevOps base URL from repository: "
+                f"{BOLD}{cfg.tracker_base_url}{RESET} (org: {cfg.org}, project: {cfg.tracker_project_key})"
+            )
+    else:
+        inferred_vcs = infer_vcs_and_tracker_from_repo_url(norm_url)
+        if inferred_vcs is not None:
+            inf_vcs, inf_tracker, inf_org, inf_base = inferred_vcs
+            if not cfg.tracker_base_url or "acme-corp" in cfg.tracker_base_url or "acme-org" in cfg.tracker_base_url:
+                cfg.vcs_platform = inf_vcs
+                if not tracker_type:
+                    cfg.tracker_type = inf_tracker
+                if inf_org and cfg.org in ("acme-corp", "acme-org"):
+                    cfg.org = inf_org
+                if not tracker_base_url:
+                    cfg.tracker_base_url = inf_base
+
+    resolved_name = (sibling_name or (existing.name if existing else derive_repo_name_from_url(norm_url))).strip()
+    other_siblings = [s for s in cfg.siblings if s is not existing]
+    valid_name, name_or_err = validate_sibling_name(resolved_name, other_siblings, cfg.slug)
+    if not valid_name:
+        raise ValueError(f"Invalid sibling name '{resolved_name}': {name_or_err}")
+    resolved_name = name_or_err
+
+    resolved_access = sibling_access or (existing.access if existing else "active")
+    if resolved_access not in ("active", "read-only"):
+        raise ValueError("Sibling access mode must be 'active' or 'read-only'.")
+
+    resolved_role = (
+        sibling_role.strip()
+        if sibling_role is not None and sibling_role.strip()
+        else (existing.role if existing else f"Service repository ({resolved_name})")
+    )
+
+    if existing is not None:
+        existing.name = resolved_name
+        existing.url = norm_url
+        existing.role = resolved_role
+        existing.access = resolved_access
+        print(f"  {GREEN}✔{RESET} Updated sibling repository {BOLD}{resolved_name}{RESET} [{resolved_access}]")
+        return existing
+
+    new_sib = SiblingRepo(
+        name=resolved_name,
+        url=norm_url,
+        role=resolved_role,
+        access=resolved_access,
+    )
+    cfg.siblings.append(new_sib)
+    print(f"  {GREEN}✔{RESET} Added sibling repository {BOLD}{resolved_name}{RESET} [{resolved_access}]")
+    return new_sib
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Bootstrap a saiga-cart AI Workspace.")
     parser.add_argument("--config", type=Path, help="Path to existing workspace.yaml / config file")
@@ -1821,7 +2147,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--add-sibling",
         action="store_true",
-        help="Interactively add and verify sibling repositories on an existing workspace.yaml",
+        help="Add or update sibling repositories on an existing workspace.yaml (interactive or via --sibling-* flags)",
+    )
+    parser.add_argument("--sibling-url", type=str, help="Sibling repository Git URL (for --add-sibling)")
+    parser.add_argument("--sibling-name", type=str, help="Sibling repository local folder name (for --add-sibling)")
+    parser.add_argument("--sibling-role", type=str, help="Sibling repository role/intent summary (for --add-sibling)")
+    parser.add_argument(
+        "--sibling-access",
+        choices=["active", "read-only"],
+        help="Sibling repository agent access mode (for --add-sibling)",
+    )
+    parser.add_argument(
+        "--tracker-type",
+        choices=["github", "jira", "gitlab", "azure-devops", "none"],
+        help="Set or override the workspace story/issue management tool and prune unused tracker skills",
+    )
+    parser.add_argument("--tracker-base-url", type=str, help="Set or override issue tracker base URL")
+    parser.add_argument("--tracker-project-key", type=str, help="Set or override issue tracker project key")
+    parser.add_argument("--clone", action="store_true", help="Clone sibling repositories immediately after configuring")
+    parser.add_argument(
+        "--skip-verify",
+        action="store_true",
+        help="Skip git ls-remote URL verification in non-interactive --add-sibling mode",
     )
     parser.add_argument(
         "--preset",
@@ -1850,11 +2197,32 @@ def main() -> None:
             print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)
         load_env_files(ws_path.parent)
-        run_interactive_auth_setup(cfg, ws_path.parent)
+        if args.sibling_url or args.sibling_name:
+            try:
+                upsert_sibling_non_interactive(
+                    cfg,
+                    sibling_url=args.sibling_url,
+                    sibling_name=args.sibling_name,
+                    sibling_role=args.sibling_role,
+                    sibling_access=args.sibling_access,
+                    tracker_type=args.tracker_type,
+                    tracker_base_url=args.tracker_base_url,
+                    tracker_project_key=args.tracker_project_key,
+                    skip_verify=args.skip_verify,
+                )
+            except ValueError as error:
+                print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+                raise SystemExit(2)
+            generate_workspace(cfg, ws_path.parent)
+            if args.clone:
+                subprocess.run([sys.executable, str(ws_path.parent / "scripts" / "clone_siblings.py")], check=False)
+            return
+
         print(f"\n{BLUE}{BOLD}--- Add Sibling Repositories ---{RESET}")
         cfg.siblings = prompt_and_verify_siblings(cfg)
+        run_interactive_auth_setup(cfg, ws_path.parent)
         generate_workspace(cfg, ws_path.parent)
-        if cfg.siblings and sys.stdin.isatty() and prompt_bool("Clone newly configured sibling repositories now?", True):
+        if cfg.siblings and (args.clone or (sys.stdin.isatty() and prompt_bool("Clone newly configured sibling repositories now?", True))):
             subprocess.run([sys.executable, str(ws_path.parent / "scripts" / "clone_siblings.py")], check=False)
         return
 

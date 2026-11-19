@@ -181,6 +181,105 @@ class TestBootstrapUnit(unittest.TestCase):
         self.assertEqual(vs_proj, "Platform")
         self.assertEqual(vs_base, "https://contoso.visualstudio.com/Platform")
 
+    def test_infer_ado_details_from_ssh_and_https_repo_urls(self) -> None:
+        # SCP-style SSH v3 URL
+        inferred = bootstrap.infer_ado_details_from_repo_url(
+            "git@ssh.dev.azure.com:v3/contoso/CommercePlatform/pricing-service"
+        )
+        self.assertEqual(
+            inferred,
+            ("contoso", "CommercePlatform", "https://dev.azure.com/contoso/CommercePlatform"),
+        )
+        # ssh:// v3 URL
+        inferred_ssh = bootstrap.infer_ado_details_from_repo_url(
+            "ssh://git@ssh.dev.azure.com/v3/contoso/Commerce%20Platform/orders-portal.git"
+        )
+        self.assertEqual(
+            inferred_ssh,
+            ("contoso", "Commerce Platform", "https://dev.azure.com/contoso/Commerce%20Platform"),
+        )
+        # HTTPS _git URL with username prefix
+        inferred_https = bootstrap.infer_ado_details_from_repo_url(
+            "https://contoso@dev.azure.com/contoso/CommercePlatform/_git/pricing-service"
+        )
+        self.assertEqual(
+            inferred_https,
+            ("contoso", "CommercePlatform", "https://dev.azure.com/contoso/CommercePlatform"),
+        )
+
+    def test_upsert_sibling_non_interactive_infers_ado_and_updates_role(self) -> None:
+        cfg = bootstrap.WorkspaceConfig(
+            name="ADO Workspace",
+            slug="ado-ws",
+            org="acme-org",
+            tracker_type="azure-devops",
+            tracker_project_key="ACME",
+            tracker_base_url="https://dev.azure.com/acme-org/ACME",
+            vcs_platform="azure-repos",
+        )
+        sib = bootstrap.upsert_sibling_non_interactive(
+            cfg,
+            sibling_url="git@ssh.dev.azure.com:v3/contoso/CommercePlatform/pricing-service",
+            sibling_name=None,
+            sibling_role=None,
+            sibling_access=None,
+            skip_verify=True,
+        )
+        self.assertEqual(sib.name, "pricing-service")
+        self.assertEqual(cfg.org, "contoso")
+        self.assertEqual(cfg.tracker_project_key, "CommercePlatform")
+        self.assertEqual(cfg.tracker_base_url, "https://dev.azure.com/contoso/CommercePlatform")
+
+        # Second pass (remapping role and access after inspecting the repo)
+        updated = bootstrap.upsert_sibling_non_interactive(
+            cfg,
+            sibling_url=None,
+            sibling_name="pricing-service",
+            sibling_role="Pricing calculation REST API (.NET 8) owning tier discounts",
+            sibling_access="read-only",
+            skip_verify=True,
+        )
+        self.assertEqual(len(cfg.siblings), 1)
+        self.assertEqual(updated.role, "Pricing calculation REST API (.NET 8) owning tier discounts")
+        self.assertEqual(updated.access, "read-only")
+
+    def test_tracker_skill_pruning_and_agents_routing_only_deploys_selected_tracker(self) -> None:
+        repo_root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "ado-ws"
+            bootstrap.prepare_output_directory(repo_root, target)
+            cfg = bootstrap.WorkspaceConfig(
+                name="ADO Workspace",
+                slug="ado-ws",
+                org="acme-corp",
+                tracker_type="github",  # Initially github, should auto-infer azure-devops from sibling URL
+                tracker_base_url="https://github.com/acme-corp/main-repo",
+            )
+            bootstrap.upsert_sibling_non_interactive(
+                cfg,
+                sibling_url="git@ssh.dev.azure.com:v3/contoso/CommercePlatform/pricing-service",
+                sibling_name="pricing-service",
+                sibling_role="Pricing service",
+                sibling_access="active",
+                skip_verify=True,
+            )
+            self.assertEqual(cfg.tracker_type, "azure-devops")
+            bootstrap.generate_workspace(cfg, target)
+
+            skills_dir = target / ".github" / "skills"
+            self.assertTrue((skills_dir / "ado-work-item-onboard").is_dir())
+            self.assertFalse((skills_dir / "jira-story-onboard").exists())
+            self.assertFalse((skills_dir / "jira-status-sync").exists())
+            self.assertFalse((skills_dir / "github-issue-onboard").exists())
+            self.assertFalse((skills_dir / "github-status-sync").exists())
+            self.assertFalse((skills_dir / "gitlab-issue-onboard").exists())
+
+            agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("`ado-work-item-onboard`", agents_text)
+            self.assertNotIn("`jira-story-onboard`", agents_text)
+            self.assertNotIn("`github-issue-onboard`", agents_text)
+            self.assertNotIn("`gitlab-issue-onboard`", agents_text)
+
     def test_normalize_git_repo_url_strips_browser_suffixes_and_clone_prefix(self) -> None:
         raw = "git clone https://dev.azure.com/acme/My%20Proj/_git/core-api/pullrequest/42"
         self.assertEqual(

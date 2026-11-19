@@ -20,9 +20,10 @@ Use this order when workspace documents overlap:
 3. `docs/architecture.md` is the canonical summary of current cross-repository state.
 4. Accepted ADRs (`docs/adr/`) record binding architectural decisions; newer superseding ADRs win.
 5. The [skill index](.github/skills/README.md) routes specialized tasks to on-demand `SKILL.md` procedures:
+   - Workspace & topology: `add-sibling`
    - Planning & delivery: `planning-scaffold`, `story-refiner`, `planning-docs-audit`
    - Quality, review & Harness² evolution: `consensus-check`, `harness2`, `pr-create`, `pr-reviewer`
-   - Issue tracker onboarding & status sync: `jira-story-onboard`, `jira-status-sync`, `github-issue-onboard`, `github-status-sync`, `gitlab-issue-onboard`, `ado-work-item-onboard`
+   - Issue tracker onboarding & status sync: {{TRACKER_SKILLS_LIST|default("`jira-story-onboard`, `jira-status-sync`, `github-issue-onboard`, `github-status-sync`, `gitlab-issue-onboard`, `ado-work-item-onboard`")}}
 6. Planning files (timebox READMEs, goal/epic plans, and story files) define scope and acceptance criteria for specific work items.
 
 ---

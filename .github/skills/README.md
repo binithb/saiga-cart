@@ -5,6 +5,7 @@ This index makes the workspace's specialized agent procedures discoverable.
 
 | Category | Task | Procedure |
 |---|---|---|
+| **Workspace & Topology** | Add or remap a sibling repository, inspect stack/contracts, and rewrite agent & architecture files | [add-sibling](add-sibling/SKILL.md) |
 | **Planning & Delivery** | Scaffold a new cycle, sprint, PI, goal, epic, or story | [planning-scaffold](planning-scaffold/SKILL.md) |
 | **Planning & Delivery** | Batch-refine and size stories for AI execution | [story-refiner](story-refiner/SKILL.md) |
 | **Planning & Delivery** | Validate planning document structure and link integrity | [planning-docs-audit](planning-docs-audit/SKILL.md) |

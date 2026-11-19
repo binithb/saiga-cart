@@ -95,6 +95,8 @@ python bootstrap.py --preset jira-safe --output ../my-jira-workspace
 python bootstrap.py --preset ado-scrum --output ../my-ado-workspace
 ```
 
+Then, inside your AI coding assistant (GitHub Copilot CLI, Claude Code, Cursor), run `/add-sibling <git-repo-url>` to inspect each sibling repository, confirm its architectural intent, and automatically remap `AGENTS.md`, `docs/architecture.md`, and the Azure DevOps base URL.
+
 ---
 
 ## 📂 Repository Layout
@@ -115,6 +117,7 @@ saiga-cart/
 │   ├── workflows/                  # GitHub Actions multi-OS test matrix & Pages deploy
 │   │   └── ci-cd.yml
 │   └── skills/                     # Reusable autonomous agent procedures
+│       ├── add-sibling/            # Onboard sibling repo, inspect stack & remap agent/architecture docs
 │       ├── story-refiner/          # Batch story DoR audit and sizing
 │       ├── planning-scaffold/      # Generates cycles/sprints/epics/stories
 │       ├── planning-docs-audit/    # Validates link integrity and metadata
@@ -158,12 +161,23 @@ The repository includes 4 persistent custom agent definitions under `.github/age
 
 ---
 
-## 🔍 Diagnostics & Health Check
+## 🔍 Diagnostics, E2E Tests & Local Mock Onboarding Sandbox
 
 Run the workspace doctor anytime to verify your environment, sibling checkouts, and planning integrity:
 
 ```bash
 python scripts/workspace_doctor.py
+```
+
+To test the full new-user onboarding experience locally (including live mock Jira Cloud & Azure DevOps REST servers, mock `az` CLI, and local bare sibling Git repositories):
+
+```bash
+# Run the automated unit + interactive E2E onboarding test suite
+python -m unittest discover -s tests -v
+
+# Launch the interactive local mock sandbox for hands-on Jira or ADO walkthroughs
+python tests/mocks/tracker_sandbox.py --demo jira
+python tests/mocks/tracker_sandbox.py --demo ado
 ```
 
 ---
