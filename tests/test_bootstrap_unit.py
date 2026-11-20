@@ -482,6 +482,95 @@ class TestBootstrapUnit(unittest.TestCase):
             cfg = bootstrap.load_workspace_config(out_dir / "workspace.yaml")
             self.assertEqual(cfg.slug, "my-ai-workspace")
 
+    def test_parse_agents_selection_and_codex_yaml_serialization(self) -> None:
+        self.assertEqual(
+            bootstrap.parse_agents_selection("copilot"),
+            {"copilot": True, "claude": False, "codex": False, "cursor": False},
+        )
+        self.assertEqual(
+            bootstrap.parse_agents_selection("claude"),
+            {"copilot": False, "claude": True, "codex": False, "cursor": False},
+        )
+        self.assertEqual(
+            bootstrap.parse_agents_selection("codex"),
+            {"copilot": False, "claude": False, "codex": True, "cursor": False},
+        )
+        self.assertEqual(
+            bootstrap.parse_agents_selection("copilot, claude"),
+            {"copilot": True, "claude": True, "codex": False, "cursor": False},
+        )
+        self.assertEqual(
+            bootstrap.parse_agents_selection("all"),
+            {"copilot": True, "claude": True, "codex": True, "cursor": True},
+        )
+        with self.assertRaises(ValueError):
+            bootstrap.parse_agents_selection("")
+        with self.assertRaises(ValueError):
+            bootstrap.parse_agents_selection("copilot,unknown-tool")
+
+        cfg = bootstrap.WorkspaceConfig()
+        self.assertTrue(cfg.codex)
+        bootstrap.apply_agents_selection(cfg, "codex")
+        rendered = bootstrap.render_workspace_config(cfg)
+        self.assertIn("  copilot: false\n  claude: false\n  codex: true\n  cursor: false", rendered)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            ws_file = tmp_path / "workspace.yaml"
+            ws_file.write_text(rendered, encoding="utf-8")
+            reloaded = bootstrap.load_workspace_config(ws_file)
+            self.assertFalse(reloaded.copilot)
+            self.assertFalse(reloaded.claude)
+            self.assertTrue(reloaded.codex)
+            self.assertFalse(reloaded.cursor)
+
+            # Backward compatibility: legacy workspace.yaml without codex preserves cursor and defaults codex=True
+            legacy_file = tmp_path / "legacy.yaml"
+            legacy_file.write_text(
+                'version: 1\nworkspace:\n  name: "Legacy WS"\n  slug: "legacy-ws"\n'
+                "agents:\n  copilot: true\n  claude: false\n  cursor: true\n",
+                encoding="utf-8",
+            )
+            legacy_cfg = bootstrap.load_workspace_config(legacy_file)
+            self.assertTrue(legacy_cfg.copilot)
+            self.assertFalse(legacy_cfg.claude)
+            self.assertTrue(legacy_cfg.codex)
+            self.assertTrue(legacy_cfg.cursor)
+
+    def test_prompt_agents_selection_and_tailored_primer(self) -> None:
+        # 1. Invalid choice -> retry -> numeric choice "3" ("claude")
+        answers = iter(["invalid_agent", "3"])
+        with mock.patch("builtins.input", side_effect=lambda _prompt="": next(answers)):
+            selected = bootstrap.prompt_agents_selection("all")
+        self.assertEqual(selected, "claude")
+
+        # 2. Comma-separated numeric/key selection "2,4" -> "copilot,codex"
+        with mock.patch("builtins.input", return_value="2, 4"):
+            combo = bootstrap.prompt_agents_selection("all")
+        self.assertEqual(combo, "copilot,codex")
+
+        # 3. Default empty input -> "all"
+        with mock.patch("builtins.input", return_value=""):
+            default_sel = bootstrap.prompt_agents_selection("all")
+        self.assertEqual(default_sel, "all")
+
+        # 4. Tailored Quick Primer per selected tool(s)
+        codex_cfg = bootstrap.apply_agents_selection(bootstrap.WorkspaceConfig(name="Codex WS", slug="codex-ws"), "codex")
+        codex_primer = bootstrap.render_onboarding_primer(codex_cfg, "python3")
+        self.assertIn("codex --add-dir ..", codex_primer)
+        self.assertNotIn("copilot --add-dir ..", codex_primer)
+        self.assertNotIn("claude --add-dir ..", codex_primer)
+        self.assertIn("OpenAI Codex", codex_primer)
+
+        cc_cfg = bootstrap.apply_agents_selection(
+            bootstrap.WorkspaceConfig(name="Dual WS", slug="dual-ws"), "copilot,claude"
+        )
+        cc_primer = bootstrap.render_onboarding_primer(cc_cfg, "python3")
+        self.assertIn("copilot --add-dir ..", cc_primer)
+        self.assertIn("claude --add-dir ..", cc_primer)
+        self.assertNotIn("codex --add-dir ..", cc_primer)
+        self.assertIn("GitHub Copilot / Claude Code", cc_primer)
+
 
 if __name__ == "__main__":
     unittest.main()

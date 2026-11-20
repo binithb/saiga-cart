@@ -36,8 +36,8 @@ A story is DoR `Done` only when:
    ```
 2. **Derive Technical Facts from Code First**:
    - Inspect target sibling repositories, schemas, configs, and existing tests before asking the user. Never ask the user a question that the repository code already answers.
-3. **Grouped Human Clarifications (`ask_user`)**:
-   - Collect remaining product, scope, or trade-off decisions in structured `ask_user` rounds.
+3. **Grouped Interactive Human Clarifications**:
+   - Collect remaining product, scope, or trade-off decisions in structured interactive question rounds (`ask_user` / `AskUserQuestion` or concise grouped questions).
    - Record resolved answers in `## Decisions / Assumptions` and remove resolved items from `## Readiness gaps`.
 4. **Decompose Large Stories**:
    - Split `Large` stories into `Small` or `Medium` child stories, update `progress.md` and `Depends on` links, and run `planning_docs_audit.py`.

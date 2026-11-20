@@ -18,7 +18,7 @@ Prepare, verify, and open a Pull Request (GitHub) or Merge Request (GitLab) in t
      - **Summary / Goal**: 1–3 sentences explaining *what* changed functionally and *why*.
      - **Key Changes**: High-level bullet points of functional changes.
      - **Tracker / Story Reference**: Ticket or issue key (e.g., `PROJ-1234` or `#42`) if applicable.
-3. **Always Confirm Before Creating**: Always display a clear summary of the proposed PR/MR (repository, source branch, target branch, rebase/conflict status, readiness verdict, title, and description) and obtain explicit user approval via `ask_user` before executing the creation call.
+3. **Always Confirm Before Creating**: Always display a clear summary of the proposed PR/MR (repository, source branch, target branch, rebase/conflict status, readiness verdict, title, and description) and obtain explicit interactive user confirmation (`ask_user` / `AskUserQuestion` or direct approval) before executing the creation call.
 
 ---
 
@@ -53,14 +53,14 @@ Unless `--skip-consensus` was explicitly requested or `consensus-check` has alre
 1. Invoke the **[`consensus-check`](../consensus-check/SKILL.md)** skill in **Stage 2 (PR / MR Review)** mode on `git diff origin/<target-branch>...HEAD`.
 2. Classify the blast radius (`Low`, `Medium`, or `High`) per the `consensus-check` scaling matrix and run the independent subagent review.
 3. Present the synthesized `consensus-check` findings (`BLOCKER`, `MAJOR`, `MINOR`, `NIT`):
-   - If any `BLOCKER` or `MAJOR` issues are found, offer to fix them and re-verify before opening the PR/MR, or let the user explicitly override via `ask_user`.
+   - If any `BLOCKER` or `MAJOR` issues are found, offer to fix them and re-verify before opening the PR/MR, or let the user explicitly override via interactive confirmation (`ask_user` / `AskUserQuestion` or direct approval).
 
 ### Phase 3: Functional Summary, Confirmation & Creation
 
 1. **Draft Title & Description**:
    - Extract the tracker/issue key (`PROJ-XXXX` or `#XX`) from the branch name or commit history if present.
    - Draft a concise functional title and description (Summary, Key Changes, Tracker Reference).
-2. **Ask User Confirmation (`ask_user`)**:
+2. **Interactive User Confirmation**:
    - Present the preview card:
      - **Repository & Branches**: `<source_branch> -> <target_branch>`
      - **Rebase & Readiness Status**: Behind/ahead count, conflict check, DoD + `consensus-check` verdict

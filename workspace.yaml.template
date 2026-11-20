@@ -32,4 +32,5 @@ siblings:
 agents:
   copilot: true
   claude: true
+  codex: true
   cursor: true

@@ -10,8 +10,8 @@ Turn a local story markdown file into a tracked GitLab Issue with bidirectional 
 
 ## Mandatory 3-Step Onboarding Procedure
 
-1. **Confirm (`ask_user`) & Create GitLab Issue**:
-   - Show the proposed issue title and functional description (including the repository story permalink) via `ask_user`.
+1. **Interactive User Confirmation & Create GitLab Issue**:
+   - Show the proposed issue title and functional description (including the repository story permalink) for interactive user confirmation (`ask_user` / `AskUserQuestion` or explicit approval prompt).
    - After user confirmation, run:
      ```bash
      glab issue create --title "<title>" --description "<functional-desc-with-story-permalink>"

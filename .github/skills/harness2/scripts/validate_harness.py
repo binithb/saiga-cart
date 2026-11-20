@@ -34,15 +34,23 @@ RED_ZONE_PATTERNS = (
     ".github/workflows/*",
 )
 
+SKILL_DIR_CANDIDATES = (
+    ".github/skills",
+    ".claude/skills",
+    ".agents/skills",
+)
+
 GREEN_ZONE_PATTERNS = (
     ".github/skills/*",
+    ".claude/skills/*",
+    ".agents/skills/*",
     "scripts/*",
     "docs/ai/experience.md",
 )
 
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 PYTHON_REF_RE = re.compile(
-    r"(?:python3?(?:\s+-[A-Za-z]+)*\s+)((?:\.github/skills/[A-Za-z0-9_.-]+/scripts/|scripts/)[A-Za-z0-9_.-]+\.py)\b"
+    r"(?:python3?(?:\s+-[A-Za-z]+)*\s+)((?:\.(?:github|claude|agents)/skills/[A-Za-z0-9_.-]+/scripts/|scripts/)[A-Za-z0-9_.-]+\.py)\b"
 )
 HARDCODED_HOME_RE = re.compile(r"/home/[A-Za-z0-9_.-]+/")
 JIRA_MUTATING_SCRIPT_RE = re.compile(
@@ -202,165 +210,208 @@ class HarnessValidator:
                 f"Combined core surface ({agents_md.name} + workflow.md + architecture.md) is {core_chars} chars (exceeds {self.max_core_chars})",
             )
 
+    def _discover_skill_roots(self) -> list[Path]:
+        return [
+            self.root / rel
+            for rel in SKILL_DIR_CANDIDATES
+            if (self.root / rel).is_dir()
+        ]
+
     def audit_skills(self) -> None:
-        skills_root = self.root / ".github" / "skills"
-        skills_readme = skills_root / "README.md"
+        skill_roots = self._discover_skill_roots()
         agents_md = self._resolve_agents_file()
 
-        if not skills_root.is_dir():
-            self.add("ERROR", "SKILLS_DIR_MISSING", skills_root, ".github/skills directory does not exist")
-            return
-        if not skills_readme.is_file():
-            self.add("ERROR", "SKILLS_INDEX_MISSING", skills_readme, ".github/skills/README.md does not exist")
-            return
-
-        readme_text = skills_readme.read_text(encoding="utf-8")
-        agents_text = agents_md.read_text(encoding="utf-8") if agents_md.is_file() else ""
-
-        skill_count = 0
-        for entry in sorted(skills_root.iterdir()):
-            if entry.name == "README.md" or entry.name.startswith("."):
-                continue
-            if entry.is_symlink() and not entry.exists():
-                self.add("ERROR", "SKILL_BROKEN_SYMLINK", entry, f"Broken symlink in .github/skills: {entry.name}")
-                continue
-            if not entry.is_dir():
-                continue
-
-            skill_md = entry / "SKILL.md"
-            if skill_md.is_symlink() and not skill_md.exists():
-                self.add("ERROR", "SKILL_BROKEN_SYMLINK", skill_md, f"Broken SKILL.md symlink in {entry.name}")
-                continue
-            if not skill_md.is_file():
-                self.add("ERROR", "SKILL_MD_MISSING", entry, f"Skill directory {entry.name} is missing SKILL.md")
-                continue
-
-            skill_count += 1
-            text = skill_md.read_text(encoding="utf-8")
-            frontmatter = self.parse_frontmatter(text)
-            if frontmatter is None:
-                self.add("ERROR", "SKILL_FRONTMATTER_MISSING", skill_md, "SKILL.md is missing YAML frontmatter (--- ... ---)")
-            else:
-                name_val = frontmatter.get("name", "").strip()
-                desc_val = frontmatter.get("description", "").strip()
-                if name_val != entry.name:
-                    self.add(
-                        "ERROR",
-                        "SKILL_NAME_MISMATCH",
-                        skill_md,
-                        f"SKILL.md frontmatter name {name_val!r} does not match directory {entry.name!r}",
-                    )
-                if not desc_val:
-                    self.add("ERROR", "SKILL_DESCRIPTION_EMPTY", skill_md, "SKILL.md frontmatter description is empty")
-
-            expected_link = f"{entry.name}/SKILL.md"
-            if expected_link not in readme_text:
-                self.add(
-                    "ERROR",
-                    "SKILL_UNINDEXED",
-                    skills_readme,
-                    f"Skill {entry.name!r} is not linked in .github/skills/README.md ({expected_link})",
-                )
-            if agents_text and entry.name not in agents_text:
-                desc_summary = (frontmatter.get("description", "").strip() if frontmatter else "") or "on-demand skill"
-                suggested_line = f"- Use `{entry.name}` — {desc_summary}"
-                self.add(
-                    "WARNING",
-                    "SKILL_UNROUTED_IN_AGENTS",
-                    agents_md,
-                    f"Skill {entry.name!r} is not mentioned in {agents_md.name} routing rules (propose via h2 distill: {suggested_line})",
-                )
-
-        self.metrics["skills_count"] = skill_count
-
-    def audit_profiles(self) -> None:
-        harness_dir = self.root / ".github" / "skills" / "harness2"
-        profiles_path = harness_dir / "profiles.json"
-        if not harness_dir.is_dir() and not profiles_path.exists():
-            return
-        if not profiles_path.is_file():
+        if not skill_roots:
             self.add(
                 "ERROR",
-                "PROFILES_MISSING",
-                profiles_path,
-                "Harness² multi-repo INV/DOM profile file (.github/skills/harness2/profiles.json) is missing",
+                "SKILLS_DIR_MISSING",
+                self.root / ".github" / "skills",
+                "No active skills directory found (.github/skills, .claude/skills, or .agents/skills)",
             )
             return
 
-        try:
-            payload = json.loads(profiles_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            self.add("ERROR", "PROFILES_INVALID_JSON", profiles_path, f"Invalid JSON in profiles.json: {exc}")
-            return
+        agents_text = agents_md.read_text(encoding="utf-8") if agents_md.is_file() else ""
+        validated_slugs: set[str] = set()
+        unrouted_reported: set[str] = set()
 
-        repos = payload.get("repositories")
-        if not isinstance(repos, dict):
-            self.add("ERROR", "PROFILES_SCHEMA_ERROR", profiles_path, "profiles.json must define a 'repositories' object")
-            return
-
-        primary_repo_key = self.workspace_slug
-        if primary_repo_key not in repos and "saiga-cart" in repos:
-            primary_repo_key = "saiga-cart"
-
-        expected_repos = (primary_repo_key, *self.sibling_repos)
-        for repo_name in expected_repos:
-            spec = repos.get(repo_name)
-            if not isinstance(spec, dict):
+        for skills_root in skill_roots:
+            skills_rel = self.relative(skills_root)
+            skills_readme = skills_root / "README.md"
+            if not skills_readme.is_file():
                 self.add(
                     "ERROR",
-                    "PROFILE_REPO_MISSING",
-                    profiles_path,
-                    f"profiles.json is missing DomainSpec entry for repository {repo_name!r}",
+                    "SKILLS_INDEX_MISSING",
+                    skills_readme,
+                    f"{skills_rel}/README.md does not exist",
                 )
                 continue
-            for str_key in ("domain", "default_verifier"):
-                val = spec.get(str_key)
-                if not isinstance(val, str) or not val.strip():
+
+            readme_text = skills_readme.read_text(encoding="utf-8")
+
+            for entry in sorted(skills_root.iterdir()):
+                if entry.name == "README.md" or entry.name.startswith("."):
+                    continue
+                if entry.is_symlink() and not entry.exists():
                     self.add(
                         "ERROR",
-                        "PROFILE_FIELD_INVALID",
-                        profiles_path,
-                        f"profiles.json[{repo_name!r}].{str_key} must be a non-empty string",
+                        "SKILL_BROKEN_SYMLINK",
+                        entry,
+                        f"Broken symlink in {skills_rel}: {entry.name}",
                     )
-            for list_key in ("inv_levers", "dom_levers", "verifier_paths"):
-                items = spec.get(list_key)
-                min_len = 1 if list_key == "verifier_paths" else 2
-                if (
-                    not isinstance(items, list)
-                    or len(items) < min_len
-                    or not all(isinstance(x, str) and x.strip() for x in items)
-                ):
+                    continue
+                if not entry.is_dir():
+                    continue
+
+                skill_md = entry / "SKILL.md"
+                if skill_md.is_symlink() and not skill_md.exists():
+                    self.add("ERROR", "SKILL_BROKEN_SYMLINK", skill_md, f"Broken SKILL.md symlink in {entry.name}")
+                    continue
+                if not skill_md.is_file():
+                    self.add("ERROR", "SKILL_MD_MISSING", entry, f"Skill directory {entry.name} is missing SKILL.md")
+                    continue
+
+                validated_slugs.add(entry.name)
+                text = skill_md.read_text(encoding="utf-8")
+                frontmatter = self.parse_frontmatter(text)
+                if frontmatter is None:
                     self.add(
                         "ERROR",
-                        "PROFILE_FIELD_INVALID",
-                        profiles_path,
-                        f"profiles.json[{repo_name!r}].{list_key} must be a list of at least {min_len} non-empty string(s)",
+                        "SKILL_FRONTMATTER_MISSING",
+                        skill_md,
+                        "SKILL.md is missing YAML frontmatter (--- ... ---)",
+                    )
+                else:
+                    name_val = frontmatter.get("name", "").strip()
+                    desc_val = frontmatter.get("description", "").strip()
+                    if name_val != entry.name:
+                        self.add(
+                            "ERROR",
+                            "SKILL_NAME_MISMATCH",
+                            skill_md,
+                            f"SKILL.md frontmatter name {name_val!r} does not match directory {entry.name!r}",
+                        )
+                    if not desc_val:
+                        self.add("ERROR", "SKILL_DESCRIPTION_EMPTY", skill_md, "SKILL.md frontmatter description is empty")
+
+                expected_link = f"{entry.name}/SKILL.md"
+                if expected_link not in readme_text:
+                    self.add(
+                        "ERROR",
+                        "SKILL_UNINDEXED",
+                        skills_readme,
+                        f"Skill {entry.name!r} is not linked in {skills_rel}/README.md ({expected_link})",
+                    )
+                if agents_text and entry.name not in agents_text and entry.name not in unrouted_reported:
+                    unrouted_reported.add(entry.name)
+                    desc_summary = (frontmatter.get("description", "").strip() if frontmatter else "") or "on-demand skill"
+                    suggested_line = f"- Use `{entry.name}` — {desc_summary}"
+                    self.add(
+                        "WARNING",
+                        "SKILL_UNROUTED_IN_AGENTS",
+                        agents_md,
+                        f"Skill {entry.name!r} is not mentioned in {agents_md.name} routing rules (propose via h2 distill: {suggested_line})",
                     )
 
-            verifier_paths = spec.get("verifier_paths")
-            if isinstance(verifier_paths, list):
-                is_self = repo_name in (self.workspace_slug, self.root.name, "saiga-cart")
-                repo_root = self.root if is_self else (self.root.parent / repo_name)
-                should_check_disk = is_self or (self.check_siblings and repo_root.is_dir())
-                if should_check_disk:
-                    for rel_p in verifier_paths:
-                        if isinstance(rel_p, str) and not (repo_root / rel_p).exists():
-                            self.add(
-                                "ERROR",
-                                "PROFILE_VERIFIER_PATH_MISSING",
-                                profiles_path,
-                                f"profiles.json[{repo_name!r}] verifier_path does not exist on disk: {repo_name}/{rel_p}",
-                            )
+        self.metrics["skills_count"] = len(validated_slugs)
 
-        self.metrics["profiled_repos_count"] = len(repos)
+    def audit_profiles(self) -> None:
+        skill_roots = self._discover_skill_roots()
+        if not skill_roots:
+            return
+
+        profiled_count = 0
+        for skills_root in skill_roots:
+            skills_rel = self.relative(skills_root)
+            harness_dir = skills_root / "harness2"
+            profiles_path = harness_dir / "profiles.json"
+            if not harness_dir.is_dir() and not profiles_path.exists():
+                continue
+            if not profiles_path.is_file():
+                self.add(
+                    "ERROR",
+                    "PROFILES_MISSING",
+                    profiles_path,
+                    f"Harness² multi-repo INV/DOM profile file ({skills_rel}/harness2/profiles.json) is missing",
+                )
+                continue
+
+            try:
+                payload = json.loads(profiles_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                self.add("ERROR", "PROFILES_INVALID_JSON", profiles_path, f"Invalid JSON in profiles.json: {exc}")
+                continue
+
+            repos = payload.get("repositories")
+            if not isinstance(repos, dict):
+                self.add("ERROR", "PROFILES_SCHEMA_ERROR", profiles_path, "profiles.json must define a 'repositories' object")
+                continue
+
+            primary_repo_key = self.workspace_slug
+            if primary_repo_key not in repos and "saiga-cart" in repos:
+                primary_repo_key = "saiga-cart"
+
+            expected_repos = (primary_repo_key, *self.sibling_repos)
+            for repo_name in expected_repos:
+                spec = repos.get(repo_name)
+                if not isinstance(spec, dict):
+                    self.add(
+                        "ERROR",
+                        "PROFILE_REPO_MISSING",
+                        profiles_path,
+                        f"profiles.json is missing DomainSpec entry for repository {repo_name!r}",
+                    )
+                    continue
+                for str_key in ("domain", "default_verifier"):
+                    val = spec.get(str_key)
+                    if not isinstance(val, str) or not val.strip():
+                        self.add(
+                            "ERROR",
+                            "PROFILE_FIELD_INVALID",
+                            profiles_path,
+                            f"profiles.json[{repo_name!r}].{str_key} must be a non-empty string",
+                        )
+                for list_key in ("inv_levers", "dom_levers", "verifier_paths"):
+                    items = spec.get(list_key)
+                    min_len = 1 if list_key == "verifier_paths" else 2
+                    if (
+                        not isinstance(items, list)
+                        or len(items) < min_len
+                        or not all(isinstance(x, str) and x.strip() for x in items)
+                    ):
+                        self.add(
+                            "ERROR",
+                            "PROFILE_FIELD_INVALID",
+                            profiles_path,
+                            f"profiles.json[{repo_name!r}].{list_key} must be a list of at least {min_len} non-empty string(s)",
+                        )
+
+                verifier_paths = spec.get("verifier_paths")
+                if isinstance(verifier_paths, list):
+                    is_self = repo_name in (self.workspace_slug, self.root.name, "saiga-cart")
+                    repo_root = self.root if is_self else (self.root.parent / repo_name)
+                    should_check_disk = is_self or (self.check_siblings and repo_root.is_dir())
+                    if should_check_disk:
+                        for rel_p in verifier_paths:
+                            if isinstance(rel_p, str) and not (repo_root / rel_p).exists():
+                                self.add(
+                                    "ERROR",
+                                    "PROFILE_VERIFIER_PATH_MISSING",
+                                    profiles_path,
+                                    f"profiles.json[{repo_name!r}] verifier_path does not exist on disk: {repo_name}/{rel_p}",
+                                )
+
+            profiled_count = max(profiled_count, len(repos))
+
+        if profiled_count:
+            self.metrics["profiled_repos_count"] = profiled_count
 
     def audit_scripts_and_references(self) -> None:
         script_files: list[Path] = []
         root_scripts = self.root / "scripts"
         if root_scripts.is_dir():
             script_files.extend(sorted(root_scripts.rglob("*.py")))
-        skills_root = self.root / ".github" / "skills"
-        if skills_root.is_dir():
+        skill_roots = self._discover_skill_roots()
+        for skills_root in skill_roots:
             script_files.extend(sorted(skills_root.glob("*/scripts/*.py")))
 
         compiled_count = 0
@@ -396,13 +447,19 @@ class HarnessValidator:
         agents_md = self._resolve_agents_file()
         if agents_md.is_file():
             docs_to_scan.append(agents_md)
+        claude_md = self.root / "CLAUDE.md"
+        if claude_md.is_file():
+            docs_to_scan.append(claude_md)
+        copilot_md = self.root / ".github" / "copilot-instructions.md"
+        if copilot_md.is_file():
+            docs_to_scan.append(copilot_md)
         gitlab_ci = self.root / ".gitlab-ci.yml"
         if gitlab_ci.is_file():
             docs_to_scan.append(gitlab_ci)
         workflows_dir = self.root / ".github" / "workflows"
         if workflows_dir.is_dir():
             docs_to_scan.extend(sorted(workflows_dir.glob("*.yml")))
-        if skills_root.is_dir():
+        for skills_root in skill_roots:
             docs_to_scan.extend(sorted(skills_root.glob("*/SKILL.md")))
 
         for doc in docs_to_scan:
@@ -591,7 +648,7 @@ class HarnessValidator:
 
         # Check Frozen Verifier rule on validator/test scripts
         for rel_path in green_touched:
-            if fnmatch.fnmatch(rel_path, ".github/skills/*/scripts/*.py"):
+            if any(fnmatch.fnmatch(rel_path, f"{cand}/*/scripts/*.py") for cand in SKILL_DIR_CANDIDATES):
                 diff_proc = subprocess.run(
                     ["git", "diff", self.base_ref, "--", rel_path],
                     cwd=self.root,
@@ -764,9 +821,9 @@ class HarnessValidator:
 
 def default_root() -> Path:
     cwd = Path.cwd()
-    if ((cwd / "AGENTS.md").is_file() or (cwd / "AGENTS.md.template").is_file()) and (
-        cwd / ".github" / "skills"
-    ).is_dir():
+    if ((cwd / "AGENTS.md").is_file() or (cwd / "AGENTS.md.template").is_file()) and any(
+        (cwd / rel).is_dir() for rel in SKILL_DIR_CANDIDATES
+    ):
         return cwd
     return Path(__file__).resolve().parents[4]
 

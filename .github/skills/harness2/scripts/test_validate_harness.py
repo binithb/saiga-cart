@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -324,6 +325,28 @@ class ValidateHarnessTests(unittest.TestCase):
             findings = validator.validate()
             codes = {f.code for f in findings}
             self.assertIn("UNCONFIRMED_JIRA_MUTATION_SKILL", codes)
+
+    def test_claude_and_codex_native_skill_layouts_validate_cleanly(self) -> None:
+        for skills_rel in (".claude/skills", ".agents/skills"):
+            with self.subTest(skills_rel=skills_rel), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "saiga-cart"
+                self._create_minimal_workspace(root)
+                (root / skills_rel).parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(root / ".github" / "skills"), str(root / skills_rel))
+                (root / ".github").rmdir()
+                (root / "AGENTS.md").write_text(
+                    f"# AGENTS\nUse `sample-skill` (`python3 {skills_rel}/sample-skill/scripts/check.py`).\n",
+                    encoding="utf-8",
+                )
+                (root / skills_rel / "sample-skill" / "SKILL.md").write_text(
+                    "---\nname: sample-skill\ndescription: A sample skill.\n---\n\n"
+                    f"Run `python3 {skills_rel}/sample-skill/scripts/check.py`.\n",
+                    encoding="utf-8",
+                )
+                validator = vh.HarnessValidator(root)
+                findings = validator.validate()
+                self.assertEqual(findings, [])
+                self.assertEqual(validator.metrics.get("skills_count"), 1)
 
     def test_real_repository_passes_with_zero_errors(self) -> None:
         repo_root = Path(__file__).resolve().parents[4]

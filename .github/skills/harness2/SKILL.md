@@ -10,7 +10,7 @@ Adapted from Google Research's **Harness² (`arXiv:2610.14224`)** (*Propose–Pr
 Unlike open-ended autonomous harness mutation, this skill enforces **Developer-Gated Harness Evolution** across the workspace and its configured sibling repositories:
 
 1. **Deterministic Surface Validation (`h2 audit`):** Enforces an always-on `AGENTS.md` character budget (`<= 14,000` chars), skill frontmatter and index parity, Python script compilation and path resolution, ADR index integrity, closed-timebox compaction hygiene, and optional sibling-repo pointer checks.
-2. **Prose-to-Script Graduation (`h2 distill`):** Prevents `AGENTS.md` context rot by graduating recurring failures, review findings, and user corrections down the **Cost Hierarchy** behind an explicit `ask_user` confirmation gate.
+2. **Prose-to-Script Graduation (`h2 distill`):** Prevents `AGENTS.md` context rot by graduating recurring failures, review findings, and user corrections down the **Cost Hierarchy** behind an explicit interactive confirmation gate (`ask_user` / `AskUserQuestion` or direct approval).
 3. **Exception-Triggered Worktree Probes (`h2 probe`):** When a story verification command fails repeatedly ($\ge 2$ times), runs two orthogonal hypotheses (`INV` contract/verifier lens vs. `DOM` target-repo architecture lens) in isolated `git worktree` checkouts and selects the candidate that turns the deterministic verifier green.
 
 ---
@@ -22,7 +22,7 @@ Every file in the agent harness belongs to one of two governance zones:
 | Zone | Paths | Purpose | Mutation Rule |
 |---|---|---|---|
 | **Red Zone** *(Governance & Architecture Contracts)* | `AGENTS.md`, `AGENTS.md.template`, `docs/workflow.md`, `docs/architecture.md`, `docs/adr/**`, `docs/ai/adr/**`, `docs/ai/wow-adr/**`, `.github/workflows/**`, `.gitlab-ci.yml` | Workspace charter, cross-repo ownership boundaries, architectural decisions, and CI gates | Never mutate autonomously for tactical lessons. Requires explicit user request or an approved `h2 distill` escalation when no lower-cost target fits. Never weaken or delete existing verification assertions (**Frozen Verifier rule**). |
-| **Green Zone** *(Operational Skills, Validators & Experience)* | `.github/skills/**`, `scripts/**`, `docs/ai/experience.md` | Deterministic audit scripts, on-demand skill procedures, and the cross-sprint experience ledger | Primary destination for `h2 distill`. Still requires developer approval via the `ask_user` 3-Line Evidence Audit Card before writing changes. |
+| **Green Zone** *(Operational Skills, Validators & Experience)* | `.github/skills/**`, `.claude/skills/**`, `.agents/skills/**`, `scripts/**`, `docs/ai/experience.md` | Deterministic audit scripts, on-demand skill procedures, and the cross-sprint experience ledger | Primary destination for `h2 distill`. Still requires developer approval via the interactive 3-Line Evidence Audit Card (`ask_user` / `AskUserQuestion` or structured prompt) before writing changes. |
 
 ---
 
@@ -116,12 +116,12 @@ Invoke `h2 distill` when:
    - Does it belong to a specific workflow phase (`story-refiner`, `pr-reviewer`, `pr-create`, `jira-story-onboard`, `planning-scaffold`)? $\rightarrow$ **Tier 2 (Skill)**.
    - Is it a cross-repo technical gotcha that needs a structured cue before automation is warranted? $\rightarrow$ **Tier 3 (`docs/ai/experience.md`)**.
    - Does it change architectural or team governance policy? $\rightarrow$ **Tier 4/5 (ADR / `AGENTS.md` — Red Zone)**.
-3. **Explain the Adaptation in Plain Language, Then Present the 3-Line Evidence Audit Card via `ask_user` (Mandatory Gate):**
-   - Never apply harness mutations silently, and never open `ask_user` cold with opaque error codes or internal jargon.
-   - **Before calling `ask_user`**, print a brief plain-language breakdown in your chat message so the user can read it comfortably above the prompt:
+3. **Explain the Adaptation in Plain Language, Then Present the 3-Line Evidence Audit Card for Interactive User Confirmation (Mandatory Gate):**
+   - Never apply harness mutations silently, and never prompt for approval cold with opaque error codes or internal jargon.
+   - **Before requesting confirmation (`ask_user` / `AskUserQuestion` or structured user prompt)**, print a brief plain-language breakdown in your chat message so the user can read it comfortably above the prompt:
      1. **Already applied in this session vs. proposed by `h2 distill`:** Clearly separate changes already made during the task from the new harness adaptation being proposed.
      2. **Concrete adaptation per file (Before → After):** Explain in plain language what each file change actually does and why it prevents the mistake in future sessions.
-   - Then include the concise **3-Line Evidence Audit Card** in the `ask_user` prompt:
+   - Then include the concise **3-Line Evidence Audit Card** in the interactive confirmation prompt (`ask_user` / `AskUserQuestion`):
      - **Line 1 — Target & Zone:** `<file path>` (`Green Zone` or `Red Zone`) — Tier `<1..5>` (`Script` | `Skill` | `Experience Ledger` | `ADR` | `AGENTS.md`).
      - **Line 2 — Evidence:** `<1-sentence cite of the session failure, PR/MR review cluster, or user correction (effect: helped|hurt, confidence: high|medium|provisional)>`.
      - **Line 3 — Proposed Change:** `<1–2 line ASD-STE100 summary of the exact check/rule to add (and any redundant prose to prune)>`.

@@ -42,7 +42,7 @@ Use this order when workspace documents overlap:
 - **Definition of Ready (DoR):** Only pick up a story whose `Definition of Ready` is `Done` and whose `Effort` is `Small` or `Medium`. If a story is `Large` or incomplete, run `story-refiner` to decompose or refine it first.
 - **Status Lifecycle:** Allowed story and `progress.md` statuses are `Not started`, `In progress`, `In review`, `Blocked`, and `Done`.
 - **Stories are Independent by Default:** Most stories have no prerequisites and can be worked on in parallel. Only stories carrying an explicit `Depends on` link must wait.
-- **Issue Tracker Bidirectional Linking & Confirmation Gate:** Never create or mutate remote tracker tickets, remote links, worklogs, or PR/MR comments without explicit user approval via `ask_user` (and `--confirm` where supported). When onboarding a story, strip any leading numeric prefix (`01-`), append `-<KEY>.md` via `git mv`, and link both ways.
+- **Issue Tracker Bidirectional Linking & Confirmation Gate:** Never create or mutate remote tracker tickets, remote links, worklogs, or PR/MR comments without explicit interactive user confirmation (`ask_user` / `AskUserQuestion` or direct user approval, plus `--confirm` where supported). When onboarding a story, strip any leading numeric prefix (`01-`), append `-<KEY>.md` via `git mv`, and link both ways.
 - **Architecture & ADR Reality:** If a merged change alters system architecture or directory contracts, update `docs/architecture.md` in the same PR/MR. Record non-obvious or hard-to-reverse choices as an ADR under `docs/adr/`.
 
 ---
@@ -51,6 +51,6 @@ Use this order when workspace documents overlap:
 
 - **Explicit & Simple over Clever:** Prefer explicit, readable control flow over implicit magic or speculative abstractions. If an implementation is hard to explain, simplify it.
 - **Micro-Surgical Discipline:** Touch only what the task requires; do not refactor or restyle adjacent code. Clean up any temporary files or orphans introduced by your change.
-- **Confused-State Gating:** In the face of ambiguity, refuse the temptation to guess—stop and ask the user via `ask_user` before editing.
+- **Confused-State Gating:** In the face of ambiguity, refuse the temptation to guess—stop and request interactive clarification (`ask_user` / `AskUserQuestion` or direct user prompt) before editing.
 - **Risk-Scaled Review & Harness² Evolution:** Use `pr-create` (which runs readiness checks and Stage 2 `consensus-check`) before opening PRs/MRs, `pr-reviewer` for interactive review walkthroughs, and `harness2` (`python3 .github/skills/harness2/scripts/validate_harness.py`) to audit context budgets, distill recurring lessons into `docs/ai/experience.md` or scripts, and run exception-triggered `INV`/`DOM` task probes.
 

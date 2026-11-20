@@ -280,7 +280,13 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("--preset github-scrum --output ../my-ai-workspace", index_text)
         self.assertIn("code my-ai-workspace.code-workspace", index_text)
         self.assertNotIn("saiga-cart.code-workspace", index_text)
-        real_skills = {p.name for p in (ROOT / ".github" / "skills").iterdir() if p.is_dir()}
+        skills_dirs = [
+            ROOT / rel
+            for rel in (".github/skills", ".claude/skills", ".agents/skills")
+            if (ROOT / rel).is_dir()
+        ]
+        self.assertTrue(skills_dirs, "Expected at least one native skills directory")
+        real_skills = {p.name for d in skills_dirs for p in d.iterdir() if p.is_dir()}
         banner_svg = (DECK / "assets" / "saiga-cart-banner.svg").read_text(encoding="utf-8")
         banner_skills = re.findall(r'font-family="monospace"[^>]*>([a-z0-9-]+)</text>', banner_svg)
         self.assertEqual(len(banner_skills), 6)

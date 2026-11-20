@@ -85,17 +85,19 @@ def inspect_and_remap_sibling(
             f"bootstrap.py --add-sibling remap failed:\n{remap_res.stdout}\n{remap_res.stderr}"
         )
 
-    # Step 4.2: Update `.github/skills/harness2/profiles.json` with discovered verifier
-    profiles_path = workspace_dir / ".github" / "skills" / "harness2" / "profiles.json"
-    profiles_data = json.loads(profiles_path.read_text(encoding="utf-8"))
-    if sibling_name in profiles_data.get("repositories", {}):
-        profiles_data["repositories"][sibling_name]["default_verifier"] = discovered_verifier
-        profiles_data["repositories"][sibling_name]["verifier_paths"] = [
-            "pyproject.toml",
-            "openapi.yaml",
-            "tests/test_smoke.py",
-        ]
-        profiles_path.write_text(json.dumps(profiles_data, indent=2) + "\n", encoding="utf-8")
+    # Step 4.2: Update `harness2/profiles.json` across active skill directories with discovered verifier
+    for skills_rel in (".github/skills", ".claude/skills", ".agents/skills"):
+        profiles_path = workspace_dir / skills_rel / "harness2" / "profiles.json"
+        if profiles_path.is_file():
+            profiles_data = json.loads(profiles_path.read_text(encoding="utf-8"))
+            if sibling_name in profiles_data.get("repositories", {}):
+                profiles_data["repositories"][sibling_name]["default_verifier"] = discovered_verifier
+                profiles_data["repositories"][sibling_name]["verifier_paths"] = [
+                    "pyproject.toml",
+                    "openapi.yaml",
+                    "tests/test_smoke.py",
+                ]
+                profiles_path.write_text(json.dumps(profiles_data, indent=2) + "\n", encoding="utf-8")
 
     # Step 4.3: Remap `docs/architecture.md` with discovered topology & contracts
     arch_path = workspace_dir / "docs" / "architecture.md"
@@ -154,7 +156,15 @@ class TestUserOnboardingFlows(unittest.TestCase):
             f"workspace_doctor.py failed:\n{doctor_res.stdout}\n{doctor_res.stderr}",
         )
 
-        harness_script = ws_dir / ".github" / "skills" / "harness2" / "scripts" / "validate_harness.py"
+        active_skill_roots = [
+            ws_dir / rel
+            for rel in (".github/skills", ".claude/skills", ".agents/skills")
+            if (ws_dir / rel).is_dir()
+        ]
+        self.assertTrue(active_skill_roots, "Expected at least one active skills directory")
+        primary_skills = active_skill_roots[0]
+
+        harness_script = primary_skills / "harness2" / "scripts" / "validate_harness.py"
         harness_res = subprocess.run(
             [sys.executable, str(harness_script), "--root", str(ws_dir)],
             cwd=ws_dir,
@@ -168,14 +178,7 @@ class TestUserOnboardingFlows(unittest.TestCase):
             f"validate_harness.py failed:\n{harness_res.stdout}\n{harness_res.stderr}",
         )
 
-        audit_script = (
-            ws_dir
-            / ".github"
-            / "skills"
-            / "planning-docs-audit"
-            / "scripts"
-            / "planning_docs_audit.py"
-        )
+        audit_script = primary_skills / "planning-docs-audit" / "scripts" / "planning_docs_audit.py"
         audit_res = subprocess.run(
             [sys.executable, str(audit_script), "--root", str(ws_dir), "--fail-on-warning"],
             cwd=ws_dir,
@@ -217,6 +220,8 @@ class TestUserOnboardingFlows(unittest.TestCase):
                 self.sandbox.jira_base_url,
                 "SAIGA",
                 "gitlab",
+                # Section 4a: AI Coding Assistants
+                "all",
                 # Section 4b: Authentication & Live Connection Check (Jira, then GitLab)
                 "env-file",
                 ".env.jira",
@@ -373,6 +378,8 @@ class TestUserOnboardingFlows(unittest.TestCase):
                 # Section 3: Tracker Connection Details (preset skipped framework/tracker/VCS questions)
                 self.sandbox.jira_base_url,
                 "SAIGA",
+                # Section 4a: AI Coding Assistants
+                "all",
                 # Section 4b: Configure Jira auth, skip GitLab auth initially
                 "env-file",
                 ".env.jira",
@@ -635,6 +642,8 @@ class TestUserOnboardingFlows(unittest.TestCase):
                 self.sandbox.ado_org_url,
                 "CorePlatform",
                 "azure-repos",
+                # Section 4a: AI Coding Assistants
+                "all",
                 # Section 4b: Authentication & Live Connection Check (ADO PAT verified against mock server)
                 "env-file",
                 ".env.azure",
@@ -766,6 +775,8 @@ class TestUserOnboardingFlows(unittest.TestCase):
                 # Section 3: ADO Connection Details (preset skipped framework/tracker/VCS questions)
                 self.sandbox.ado_org_url,
                 "CorePlatform",
+                # Section 4a: AI Coding Assistants
+                "all",
                 # Section 4b: Configure ADO PAT in .env.azure
                 "env-file",
                 ".env.azure",
@@ -957,6 +968,84 @@ class TestUserOnboardingFlows(unittest.TestCase):
             self.assertFalse((ws_dir / ".github" / "skills" / "github-issue-onboard").exists())
             self.assertFalse((ws_dir / ".github" / "skills" / "github-status-sync").exists())
             self.assertTrue((ws_dir / ".github" / "skills" / "ado-work-item-onboard").is_dir())
+            self._run_workspace_validators(ws_dir, env)
+
+    def test_interactive_wizard_claude_selection_and_deferred_add_sibling_preservation(self) -> None:
+        """Interactive wizard selecting 'claude' installs only Claude Code artifacts and preserves them across add-sibling."""
+        with tempfile.TemporaryDirectory() as tmp:
+            parent_dir = Path(tmp)
+            ws_dir = parent_dir / "claude-only-ws"
+            payments_repo_url = str(self.sandbox.sibling_repos["payments-api"])
+            env = self.sandbox.env_with_mocks()
+
+            wizard_answers = [
+                "jira-safe",
+                "Claude Native Workspace",
+                "acme-corp",
+                self.sandbox.jira_base_url,
+                "SAIGA",
+                # Section 4a: Select Claude Code only!
+                "claude",
+                # Section 4b: Auth
+                "env-file",
+                ".env.jira",
+                self.sandbox.state.jira_email,
+                self.sandbox.state.jira_token,
+                "skip",
+                # Section 5: Skip siblings initially
+                "n",
+            ]
+
+            res = subprocess.run(
+                [sys.executable, str(self.template_dir / "bootstrap.py"), "--output", str(ws_dir)],
+                input="\n".join(wizard_answers) + "\n",
+                cwd=parent_dir,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(res.returncode, 0, f"{res.stdout}\n{res.stderr}")
+            self.assertIn("claude --add-dir ..", res.stdout)
+            self.assertNotIn("copilot --add-dir ..", res.stdout)
+            self.assertTrue((ws_dir / "AGENTS.md").is_file())
+            self.assertTrue((ws_dir / "CLAUDE.md").is_file())
+            self.assertTrue((ws_dir / ".claude" / "skills").is_dir())
+            self.assertFalse((ws_dir / ".github" / "copilot-instructions.md").exists())
+            self.assertFalse((ws_dir / ".github" / "skills").exists())
+            self.assertFalse((ws_dir / ".agents" / "skills").exists())
+
+            # Deferred add-sibling must preserve claude-only configuration
+            step1_res = subprocess.run(
+                [
+                    sys.executable,
+                    str(ws_dir / "bootstrap.py"),
+                    "--add-sibling",
+                    "--sibling-url",
+                    payments_repo_url,
+                    "--clone",
+                ],
+                cwd=ws_dir,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(step1_res.returncode, 0, f"{step1_res.stdout}\n{step1_res.stderr}")
+
+            inspect_and_remap_sibling(
+                workspace_dir=ws_dir,
+                sibling_dir=parent_dir / "payments-api",
+                sibling_name="payments-api",
+                sibling_url=payments_repo_url,
+                access="active",
+                tracker_type="jira",
+                tracker_base_url=self.sandbox.jira_base_url,
+                tracker_project_key="SAIGA",
+                env=env,
+            )
+
+            self.assertFalse((ws_dir / ".github" / "skills").exists())
+            self.assertFalse((ws_dir / ".agents" / "skills").exists())
+            self.assertTrue((ws_dir / ".claude" / "skills" / "jira-story-onboard" / "SKILL.md").is_file())
             self._run_workspace_validators(ws_dir, env)
 
 

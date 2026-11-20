@@ -8,7 +8,7 @@ argument-hint: '<git-repo-url or sibling-repo-name>'
 
 Use this skill when the user invokes `/add-sibling` or asks to add, onboard, or remap a sibling repository in the workspace.
 
-Every time this skill runs, it verifies and clones the repository, inspects the repository to discover its stack and entry points first, asks the user via `ask_user` to confirm its architectural intent and role, and rewrites all workspace agent instruction and architecture files.
+Every time this skill runs, it verifies and clones the repository, inspects the repository to discover its stack and entry points first, requests interactive user confirmation (`ask_user` / `AskUserQuestion` or direct user prompt) for its architectural intent and role, and rewrites all workspace agent instruction and architecture files.
 
 ---
 
@@ -16,7 +16,7 @@ Every time this skill runs, it verifies and clones the repository, inspects the 
 
 ### Step 1: Collect Target Repository & Verify / Clone
 
-1. If the user has not yet provided a Git repository URL (or an existing sibling folder name under `../<repo-name>`), ask for the Git repository URL via `ask_user`.
+1. If the user has not yet provided a Git repository URL (or an existing sibling folder name under `../<repo-name>`), prompt interactively (`ask_user` / `AskUserQuestion` or direct question) for the Git repository URL.
 2. Register the repository, verify remote reachability (`git ls-remote`), auto-infer Azure DevOps org/project/base URL (when applicable), and clone it beside the workspace (`../<repo-name>`) by running:
    ```bash
    python3 bootstrap.py --add-sibling --sibling-url "<GIT_URL>" --clone
@@ -32,9 +32,9 @@ Before asking the developer to describe the repository, inspect `../<repo-name>/
 3. **Contracts & Interfaces**: Look for exposed or consumed APIs, OpenAPI/Swagger specs, Protobuf/gRPC definitions, GraphQL schemas, database migrations, or message queue consumers/producers.
 4. **Domain Concepts**: Note key domain nouns or bounded-context terms that may belong in `GLOSSARY.md`.
 
-### Step 3: Ask the User for Intent, Description & Story Management Tool (`ask_user`)
+### Step 3: Interactive User Confirmation of Intent, Description & Story Management Tool
 
-Present a brief summary of what you discovered in Step 2 (stack, APIs, test commands), and call `ask_user` to confirm or refine:
+Present a brief summary of what you discovered in Step 2 (stack, APIs, test commands), and request interactive user confirmation (`ask_user` / `AskUserQuestion` or structured prompt) to confirm or refine:
 
 1. **`role` (Intent & Responsibility Summary)**: Pre-fill the default with a concise 1–2 sentence description synthesized from Step 2 (for example: *"Pricing calculation REST API (.NET 8) owning tier rules, discount evaluation, and quote endpoints"*). Ask the user to confirm or edit what this repo owns and what kinds of changes belong in it.
 2. **`relationships` (Cross-Repo Interactions)**: How this repository interacts with other sibling repositories in the workspace (upstream callers, downstream dependencies, shared schemas, or release coordination).

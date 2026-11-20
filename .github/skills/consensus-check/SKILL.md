@@ -10,9 +10,13 @@ Run a structured, multi-perspective review across distinct model families before
 
 ## Core Design Principles
 
-1. **Dynamic Model Selection (No Hardcoded Vendor Lock-In)**:
-   - Model availability evolves rapidly. Instead of relying on static model lists in `AGENTS.md` or `docs/workflow.md`, **select models dynamically at runtime** from the models supported by the active Copilot CLI `task` tool.
-   - **Cross-Family Diversity Rule**: Whenever scaling requires $\ge 2$ models, pick models from **different model families** (for example: one Anthropic Claude model, one OpenAI GPT/Codex model, and one Google Gemini or xAI Grok model) so correlated blind spots do not reinforce each other.
+1. **Dynamic Model Selection & Single-Vendor Runtime Fallback (No Hardcoded Vendor Lock-In)**:
+   - Model availability evolves rapidly. Instead of relying on static model lists in `AGENTS.md` or `docs/workflow.md`, **select models dynamically at runtime** when your environment supports multi-model subagents (such as the GitHub Copilot CLI `task` tool).
+   - **Cross-Family Diversity Rule (Multi-Model Runtimes)**: Whenever scaling requires $\ge 2$ models and cross-family selection is available, pick models from **different model families** (for example: one Anthropic Claude model, one OpenAI GPT/Codex model, and one Google Gemini or xAI Grok model) so correlated blind spots do not reinforce each other.
+   - **Single-Vendor Runtime Fallback (Claude Code & OpenAI Codex)**: When running inside a single-vendor assistant where cross-family model selection is unavailable (such as Claude Code `Task` subagents or OpenAI Codex subagents), spawn **independent fresh-context subagents with orthogonal adversarial review charters** in parallel so reviewers do not share reasoning priors:
+     - *Reviewer A — Correctness, Failure Modes & Security Boundary*: Hunts concrete logic bugs, auth/data-exposure flaws, and unhandled error paths.
+     - *Reviewer B — Cross-Repo Contracts, Compatibility & Architecture*: Verifies API/schema compatibility, workspace ADR alignment, and blast-radius boundaries.
+     - *Reviewer C (High Blast Radius) — Verification, Migration Safety & Edge Cases*: Audits test coverage, rollback/migration safety, and operational invariants.
    - **User Override**: If the user passes `--models` or `--arbiter`, honor their explicit choice.
 
 2. **Blast-Radius Scaling (Proportional Cost & Latency)**:
@@ -71,7 +75,9 @@ Every reviewer subagent prompt and the final synthesis pass **must** enforce the
 
 ### Step 2: Dispatch Independent Reviewer Subagents in Parallel
 
-1. Select the panel of models from currently available `task` tool models (using `explore` or `code-review` agent types for read-only inspection) following the **Cross-Family Diversity Rule**.
+1. Assemble the reviewer panel according to the active runtime:
+   - **GitHub Copilot CLI (`task` tool)**: Select distinct models across families following the **Cross-Family Diversity Rule** (using read-only `explore` or `code-review` subagents).
+   - **Claude Code / OpenAI Codex (Single-Vendor Runtimes)**: Spawn independent fresh-context subagents assigned distinct **adversarial role-separated charters** (*Reviewer A: Correctness & Security*, *Reviewer B: Contracts & Architecture*, and *Reviewer C: Verification & Migration Safety* for `High` blast radius).
 2. Launch all reviewer subagents **in parallel in a single turn**, instructing each reviewer to:
    - Independently inspect the target files/diff using read-only tools.
    - Apply the **Mandatory Evidence-Gated Verification Rules** (verify full path before flagging; include file/line, concrete trigger, and impact).
@@ -80,12 +86,12 @@ Every reviewer subagent prompt and the final synthesis pass **must** enforce the
 ### Step 3: Arbiter Synthesis & Deduplication
 
 1. Collect all subagent responses and perform an **Evidence-Gated Synthesis**:
-   - **Deduplicate** overlapping findings raised by multiple models, noting where multiple independent models converged (`[Consensus: 2/2]` or `[Consensus: 3/3]`).
-   - **Verify & Filter Disagreements**: When only one model flags a `BLOCKER` or `MAJOR` issue, directly inspect the cited file and line to verify whether the claim holds against the actual codebase. Discard disproven hallucinations and retain verified single-model catches.
+   - **Deduplicate** overlapping findings raised by multiple reviewers, noting where multiple independent reviewers converged (`[Consensus: 2/2]` or `[Consensus: 3/3]`).
+   - **Verify & Filter Disagreements**: When only one reviewer flags a `BLOCKER` or `MAJOR` issue, directly inspect the cited file and line to verify whether the claim holds against the actual codebase. Discard disproven hallucinations and retain verified single-reviewer catches.
 2. Present a concise **Consensus Report**:
-   - **Panel & Blast Radius**: Stage, Blast Radius (`Low`/`Medium`/`High`), and Models used.
+   - **Panel & Blast Radius**: Stage, Blast Radius (`Low`/`Medium`/`High`), and Models / Reviewer Roles used.
    - **Verdict**: `APPROVE`, `APPROVE WITH RECOMMENDATIONS`, or `CHANGES REQUIRED`.
    - **Verified Findings Table**: Severity, Consensus count, Location, Issue & Trigger, and Concrete Fix.
 3. **Interactive Resolution**:
-   - If `BLOCKER` or `MAJOR` findings remain, offer to apply surgical fixes immediately (following **ASD-STE100 plain-language rules** whenever documentation, plans, stories, or ADRs are updated) or ask the user via `ask_user` how they wish to proceed.
+   - If `BLOCKER` or `MAJOR` findings remain, offer to apply surgical fixes immediately (following **ASD-STE100 plain-language rules** whenever documentation, plans, stories, or ADRs are updated) or prompt for interactive user confirmation (`ask_user` / `AskUserQuestion` or direct chat confirmation) on how to proceed.
 

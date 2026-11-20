@@ -12,7 +12,7 @@ An open-source template and interactive bootstrapper for **scaling AI developmen
 
 > 🌐 **Interactive Slide Deck & Overview**: Explore the live visual presentation and architecture walkthrough at **[https://binithb.github.io/saiga-cart/](https://binithb.github.io/saiga-cart/)**.
 
-Named after the enduring steppe antelope (**saiga**) and the collaborative load pulling of a team (**cart**), `saiga-cart` gives AI coding assistants—generating dedicated instruction files for **GitHub Copilot**, **Claude Code**, and **Cursor**, plus canonical `AGENTS.md` and `.code-workspace` files used by **Windsurf** and MCP-compatible agents—durable, synchronized context across multiple related repositories and structured delivery planning.
+Named after the enduring steppe antelope (**saiga**) and the collaborative load pulling of a team (**cart**), `saiga-cart` gives AI coding assistants—tailoring clean, native instruction files and skill directories at onboarding time for **GitHub Copilot (`copilot`)**, **Claude Code (`claude`)**, **OpenAI Codex (`codex`)**, and **Cursor**, or **`all`**—durable, synchronized context across multiple related repositories and structured delivery planning.
 
 ---
 
@@ -80,54 +80,57 @@ cd saiga-cart
 Generate your workspace in one command using a preset, then let your AI assistant inspect your repositories and configure everything automatically:
 
 ```bash
-# Pick the preset matching your team's stack:
-python bootstrap.py --preset github-scrum --output ../my-ai-workspace   # GitHub Issues + PRs + Scrum
-python bootstrap.py --preset jira-safe    --output ../my-ai-workspace   # Jira Cloud + GitLab MRs + SAFe PIs
-python bootstrap.py --preset ado-scrum    --output ../my-ai-workspace   # Azure DevOps Boards + Repos + Scrum
+# Pick the preset matching your team's stack (optionally pass --agents copilot | claude | codex | copilot,claude | all):
+python bootstrap.py --preset github-scrum --output ../my-ai-workspace                        # All assistants (default)
+python bootstrap.py --preset github-scrum --agents copilot       --output ../my-ai-workspace # GitHub Copilot only
+python bootstrap.py --preset jira-safe    --agents claude        --output ../my-ai-workspace # Claude Code only
+python bootstrap.py --preset ado-scrum    --agents codex         --output ../my-ai-workspace # OpenAI Codex only
+python bootstrap.py --preset github-scrum --agents copilot,claude --output ../my-ai-workspace # Copilot + Claude subset
 
 # Switch into your newly generated workspace:
 cd ../my-ai-workspace
 ```
 
-Open the multi-root workspace in your IDE (`code my-ai-workspace.code-workspace` for VS Code / Cursor / Windsurf), or start your terminal agent inside `../my-ai-workspace` with parent/sibling directory access enabled (e.g., `copilot --add-dir ..` or `/add-dir ../<repo-name>`), then onboard each sibling repository:
+Open the multi-root workspace in your IDE (`code my-ai-workspace.code-workspace` for VS Code / Cursor / Windsurf), or start your terminal agent inside `../my-ai-workspace` with parent/sibling directory access enabled (`copilot --add-dir ..`, `claude --add-dir ..`, or `codex --add-dir ..`), then onboard each sibling repository:
 
 ```text
-# In GitHub Copilot CLI (slash skill):
+# In GitHub Copilot CLI or Claude Code (slash skill):
 /add-sibling <your-git-repo-url>
 
-# In Claude Code, Cursor, or Windsurf chat (natural language):
+# In OpenAI Codex, Claude Code, Cursor, or Windsurf chat:
 Use add-sibling to onboard <your-git-repo-url>
 ```
 ```bash
 # Or directly from the terminal without an AI chat session:
 python bootstrap.py --add-sibling --sibling-url <your-git-repo-url> --clone
 ```
-The `add-sibling` workflow verifies and clones the repository into `../<repo-name>`, inspects its tech stack and API contracts, asks you to confirm its architectural role (`active` or `read-only`), and remaps `AGENTS.md`, `docs/architecture.md`, `.code-workspace`, and your active tracker skills.
+The `add-sibling` workflow verifies and clones the repository into `../<repo-name>`, inspects its tech stack and API contracts, asks you to confirm its architectural role (`active` or `read-only`), and remaps `AGENTS.md`, `docs/architecture.md`, `.code-workspace`, and your active tracker skills (while preserving your selected `--agents` layout).
 
 ### Option B: Interactive Guided Wizard (Token Verification & Custom Topologies)
 Prefer a guided terminal walkthrough that tests your API tokens and verifies sibling repository URLs immediately?
 
 ```bash
 python bootstrap.py
-# Or specify the target folder upfront:
+# Or specify the target folder (and optional --agents) upfront:
 python bootstrap.py --output ../my-ai-workspace
 ```
 
 1. **Preset or Custom Mode**: Pick a Quick Preset (`github-scrum`, `jira-safe`, `ado-scrum`) or **Custom Setup**.
 2. **Workspace Identity & Target Location**: Set workspace name, organization, and target folder (defaults to a clean `../<slug>` sibling directory, or in-place).
 3. **Planning, Tracker & VCS**: Choose Scrum, SAFe, Shape Up, or Kanban; Jira, GitHub, GitLab, Azure DevOps, or local markdown; and your VCS host.
-4. **Authentication & Live Check**: Save tokens to `.env.jira`, `.env.azure`, `.env.github`, `.env.gitlab`, or `.env.local` (gitignored) and test connectivity against the remote API, or skip for later.
-5. **Sibling Repositories**: Add sibling Git URLs (verified via `git ls-remote`) and optionally clone them immediately into `../<repo-name>`, or skip and run `add-sibling` later.
+4. **AI Coding Assistants**: Select `copilot`, `claude`, `codex`, `all`, or a comma-separated subset like `copilot,claude` so only your chosen tools' instruction files and native skill directories are installed (cross-OS file copies, zero symlinks).
+5. **Authentication & Live Check**: Save tokens to `.env.jira`, `.env.azure`, `.env.github`, `.env.gitlab`, or `.env.local` (gitignored) and test connectivity against the remote API, or skip for later.
+6. **Sibling Repositories**: Add sibling Git URLs (verified via `git ls-remote`) and optionally clone them immediately into `../<repo-name>`, or skip and run `add-sibling` later.
 
 ### Option C: Declarative Config (`workspace.yaml`) & Headless CLI Reference
 Commit or share a `workspace.yaml` manifest (see `workspace.yaml.template`) for repeatable team or CI bootstrapping:
 
 ```bash
-# Generate a workspace deterministically from a YAML/JSON manifest
+# Generate a workspace deterministically from a YAML/JSON manifest (optionally overriding --agents)
 python bootstrap.py --config workspace.yaml --output ../my-ai-workspace
 
-# Headless default generation (uses github-scrum unless --preset is specified)
-python bootstrap.py --non-interactive --output ../my-ai-workspace
+# Headless default generation tailored to a specific AI coding tool
+python bootstrap.py --non-interactive --agents claude --output ../my-ai-workspace
 
 # Clone all configured siblings in an existing workspace (injects PATs from .env* files)
 cd ../my-ai-workspace && python scripts/clone_siblings.py
@@ -207,7 +210,7 @@ saiga-cart/                              # Template & generator repository
 | **Planning Frameworks** | Scrum (Sprints), SAFe (Program Increments), Shape Up (Cycles), Kanban (Milestones) |
 | **Issue Trackers** | **Story onboarding**: GitHub Issues, Jira Cloud, GitLab Issues, Azure DevOps Boards, or Local Markdown (`none`)<br>**Batch status sync (`*-status-sync`)**: GitHub Issues & Jira Cloud |
 | **Version Control** | **Full `pr-create` / `pr-reviewer` automation**: GitHub PRs (`gh`), GitLab MRs (`glab` / REST)<br>**Workspace topology, authenticated `clone_siblings.py` & `consensus-check`**: GitHub, GitLab, Azure Repos, Bitbucket |
-| **AI Assistants** | **Dedicated rule files generated**: GitHub Copilot (`.github/copilot-instructions.md`), Claude Code (`CLAUDE.md`), Cursor (`.cursorrules`)<br>**Via `AGENTS.md` + `.code-workspace`**: Windsurf & MCP-compatible coding agents |
+| **AI Assistants (`--agents`)** | **GitHub Copilot (`copilot`)**: `AGENTS.md` + `.github/copilot-instructions.md` + `.github/skills/`<br>**Claude Code (`claude`)**: `AGENTS.md` + `CLAUDE.md` + `.claude/skills/`<br>**OpenAI Codex (`codex`)**: `AGENTS.md` + `.agents/skills/`<br>**Cursor (`cursor`) / `all`**: `.cursorrules`, `.code-workspace`, and any comma-separated combination (e.g. `--agents copilot,claude`) with unused tool files omitted |
 
 ---
 
@@ -230,6 +233,7 @@ Run the workspace doctor and Harness² surface validator anytime to verify `AGEN
 ```bash
 cd ../my-ai-workspace
 python scripts/workspace_doctor.py
+# Or run validate_harness.py directly from your active skills directory (.github/skills, .claude/skills, or .agents/skills):
 python .github/skills/harness2/scripts/validate_harness.py
 ```
 

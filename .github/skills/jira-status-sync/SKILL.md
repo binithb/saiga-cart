@@ -26,7 +26,7 @@ Reconcile remote Jira issue statuses with local story files and `progress.md` ch
    ```
 2. **Reconcile Local Story & Progress Files**:
    - Update `| Status | <Mapped Status> |` in each drifted story file and synchronize its checkbox and trailing status label (`— <Mapped Status>`) in `progress.md`.
-   - Note: Never mutate remote Jira statuses or log work without explicit user confirmation via `ask_user` and `--confirm`.
+   - Note: Never mutate remote Jira statuses or log work without explicit interactive user confirmation (`ask_user` / `AskUserQuestion` or direct approval) and `--confirm`.
 3. **Validate**:
    ```bash
    python3 .github/skills/planning-docs-audit/scripts/planning_docs_audit.py --fail-on-warning

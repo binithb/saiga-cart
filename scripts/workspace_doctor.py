@@ -67,29 +67,50 @@ def load_env_file(root: Path) -> dict[str, str]:
     return loaded
 
 
-def get_workspace_settings(root: Path) -> dict[str, str]:
-    """Extract tracker type and VCS platform from workspace.yaml."""
-    settings = {"tracker_type": "", "vcs_platform": ""}
+SKILL_DIR_CANDIDATES = (
+    ".github/skills",
+    ".claude/skills",
+    ".agents/skills",
+)
+
+
+def _find_skill_script(root: Path, skill_subpath: str) -> Path | None:
+    for rel in SKILL_DIR_CANDIDATES:
+        candidate = root / rel / skill_subpath
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def get_workspace_settings(root: Path) -> dict[str, object]:
+    """Extract tracker type, VCS platform, and enabled agents from workspace.yaml."""
+    settings: dict[str, object] = {
+        "tracker_type": "",
+        "vcs_platform": "",
+        "agents": {},
+    }
     ws_yaml = root / "workspace.yaml"
     if ws_yaml.is_file():
-        in_tracker = False
-        in_vcs = False
+        section = ""
+        agents_dict: dict[str, bool] = {}
         for line in ws_yaml.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
-            if stripped.startswith("tracker:"):
-                in_tracker = True
-                in_vcs = False
-            elif stripped.startswith("vcs:"):
-                in_vcs = True
-                in_tracker = False
-            elif line and not line.startswith(" ") and not line.startswith("\t"):
-                in_tracker = False
-                in_vcs = False
+            if not stripped or stripped.startswith("#"):
+                continue
+            if not line.startswith((" ", "\t")):
+                section = stripped.rstrip(":")
+                continue
 
-            if in_tracker and stripped.startswith("type:"):
+            if section == "tracker" and stripped.startswith("type:"):
                 settings["tracker_type"] = stripped.split(":", 1)[1].strip().strip("'\"")
-            elif in_vcs and stripped.startswith("platform:"):
+            elif section == "vcs" and stripped.startswith("platform:"):
                 settings["vcs_platform"] = stripped.split(":", 1)[1].strip().strip("'\"")
+            elif section == "agents" and ":" in stripped:
+                k, v = stripped.split(":", 1)
+                val_clean = v.split("#", 1)[0].strip().lower()
+                if val_clean in ("true", "false"):
+                    agents_dict[k.strip()] = val_clean == "true"
+        settings["agents"] = agents_dict
     return settings
 
 
@@ -97,6 +118,7 @@ def run_diagnostics(root: Path) -> int:
     load_env_file(root)
     print(f"\n{BOLD}{CYAN}=== saiga-cart Diagnostics ==={RESET}\n")
     errors = 0
+    settings = get_workspace_settings(root)
 
     # 1. Python Environment
     print(f"{BOLD}1. Runtime & Environment:{RESET}")
@@ -110,12 +132,35 @@ def run_diagnostics(root: Path) -> int:
         present = shutil.which(tool) is not None
         check(present, f"CLI tool: {tool}", is_warning=(tool != "git"))
 
-    # 3. Workspace Core Files
+    # 3. Workspace Core Files & Configured AI Assistant Artifacts
     print(f"\n{BOLD}3. Workspace Directives & Configuration:{RESET}")
     for req_file in ("AGENTS.md", "docs/workflow.md", "docs/architecture.md", "workspace.yaml"):
         p = root / req_file
         if not check(p.is_file(), f"Workspace file: {req_file}"):
             errors += 1
+
+    active_skill_dirs = [rel for rel in SKILL_DIR_CANDIDATES if (root / rel).is_dir()]
+    if not check(
+        bool(active_skill_dirs),
+        f"Active skills directory ({', '.join(active_skill_dirs) if active_skill_dirs else 'none found'})",
+    ):
+        errors += 1
+
+    agents_cfg = settings.get("agents")
+    if isinstance(agents_cfg, dict):
+        if agents_cfg.get("copilot") is True:
+            if not check((root / ".github" / "copilot-instructions.md").is_file(), "GitHub Copilot instructions (.github/copilot-instructions.md)"):
+                errors += 1
+            if not check((root / ".github" / "skills").is_dir(), "GitHub Copilot skills (.github/skills/)"):
+                errors += 1
+        if agents_cfg.get("claude") is True:
+            if not check((root / "CLAUDE.md").is_file(), "Claude Code instructions (CLAUDE.md)"):
+                errors += 1
+            if not check((root / ".claude" / "skills").is_dir(), "Claude Code skills (.claude/skills/)"):
+                errors += 1
+        if agents_cfg.get("codex") is True:
+            if not check((root / ".agents" / "skills").is_dir(), "OpenAI Codex skills (.agents/skills/)"):
+                errors += 1
 
     # 4. Sibling Repositories Checkout
     print(f"\n{BOLD}4. Sibling Repositories:{RESET}")
@@ -140,8 +185,8 @@ def run_diagnostics(root: Path) -> int:
 
     # 5. Planning Document Integrity
     print(f"\n{BOLD}5. Planning Document Audit:{RESET}")
-    audit_script = root / ".github" / "skills" / "planning-docs-audit" / "scripts" / "planning_docs_audit.py"
-    if audit_script.is_file():
+    audit_script = _find_skill_script(root, "planning-docs-audit/scripts/planning_docs_audit.py")
+    if audit_script is not None:
         res = subprocess.run([sys.executable, str(audit_script), "--root", str(root)], capture_output=True, text=True)
         audit_ok = res.returncode == 0
         if not check(audit_ok, "Planning document structure & links audit"):
@@ -150,8 +195,8 @@ def run_diagnostics(root: Path) -> int:
     else:
         check(False, "Planning docs audit script not found", is_warning=True)
 
-    harness_script = root / ".github" / "skills" / "harness2" / "scripts" / "validate_harness.py"
-    if harness_script.is_file():
+    harness_script = _find_skill_script(root, "harness2/scripts/validate_harness.py")
+    if harness_script is not None:
         h_res = subprocess.run([sys.executable, str(harness_script), "--root", str(root)], capture_output=True, text=True)
         h_ok = h_res.returncode == 0
         if not check(h_ok, "Harness² context budget & skill/script parity audit"):
@@ -160,9 +205,8 @@ def run_diagnostics(root: Path) -> int:
 
     # 6. Integrations & Authentication
     print(f"\n{BOLD}6. Authentication & API Tokens (for Agents & Skills):{RESET}")
-    settings = get_workspace_settings(root)
-    tracker_type = settings["tracker_type"]
-    vcs_platform = settings["vcs_platform"]
+    tracker_type = str(settings.get("tracker_type", ""))
+    vcs_platform = str(settings.get("vcs_platform", ""))
 
     present_env_files = [f for f in ENV_FILENAMES if (root / f).is_file()]
     if present_env_files:

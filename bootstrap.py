@@ -92,7 +92,195 @@ class WorkspaceConfig:
     # Agents
     copilot: bool = True
     claude: bool = True
+    codex: bool = True
     cursor: bool = True
+
+
+SKILL_DIR_BY_AGENT: dict[str, str] = {
+    "copilot": ".github/skills",
+    "claude": ".claude/skills",
+    "codex": ".agents/skills",
+}
+ALL_SKILL_DIR_RELS: tuple[str, ...] = (
+    ".github/skills",
+    ".claude/skills",
+    ".agents/skills",
+)
+SKILLS_PATH_RE = re.compile(r"\.(?:github|claude|agents)/skills\b")
+
+
+def parse_agents_selection(raw: str) -> dict[str, bool]:
+    """Parse a CLI or wizard agent selection string into boolean flags for copilot/claude/codex/cursor."""
+    tokens = [tok.strip().lower() for tok in re.split(r"[,+\s]+", raw.strip()) if tok.strip()]
+    if not tokens:
+        raise ValueError(
+            "Agent selection cannot be empty. Choose from: copilot, claude, codex, cursor, all (or comma-separated)."
+        )
+    valid = {"copilot", "claude", "codex", "cursor", "all"}
+    unknown = [tok for tok in tokens if tok not in valid]
+    if unknown:
+        raise ValueError(
+            f"Unknown agent(s): {', '.join(unknown)}. Valid options: copilot, claude, codex, cursor, all."
+        )
+    if "all" in tokens:
+        return {"copilot": True, "claude": True, "codex": True, "cursor": True}
+    selected = set(tokens)
+    return {
+        "copilot": "copilot" in selected,
+        "claude": "claude" in selected,
+        "codex": "codex" in selected,
+        "cursor": "cursor" in selected,
+    }
+
+
+def apply_agents_selection(cfg: WorkspaceConfig, raw: str) -> WorkspaceConfig:
+    """Apply a parsed agent selection string onto a WorkspaceConfig instance."""
+    flags = parse_agents_selection(raw)
+    cfg.copilot = flags["copilot"]
+    cfg.claude = flags["claude"]
+    cfg.codex = flags["codex"]
+    cfg.cursor = flags["cursor"]
+    return cfg
+
+
+def enabled_skill_dir_rels(cfg: WorkspaceConfig) -> list[str]:
+    """Return ordered native skill directories for the enabled AI coding assistants."""
+    dirs: list[str] = []
+    if cfg.copilot:
+        dirs.append(".github/skills")
+    if cfg.claude:
+        dirs.append(".claude/skills")
+    if cfg.codex:
+        dirs.append(".agents/skills")
+    if not dirs:
+        dirs.append(".github/skills")
+    return dirs
+
+
+def rewrite_skills_path_references(text: str, target_skills_rel: str) -> str:
+    """Rewrite single-tool skill root references to target_skills_rel while keeping multi-root overview lines intact."""
+    out_lines: list[str] = []
+    for line in text.splitlines(keepends=True):
+        distinct_roots = set(SKILLS_PATH_RE.findall(line))
+        if len(distinct_roots) >= 2:
+            out_lines.append(line)
+        elif distinct_roots:
+            out_lines.append(SKILLS_PATH_RE.sub(target_skills_rel, line))
+        else:
+            out_lines.append(line)
+    return "".join(out_lines)
+
+
+def _read_normalized_skill_text(path: Path, norm_rel: str) -> str | None:
+    """Read a skill file as UTF-8 normalized to norm_rel, or return None if binary."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return None
+    return rewrite_skills_path_references(raw, norm_rel)
+
+
+def reconcile_skill_directories(
+    existing_skill_dirs: list[Path],
+    seed_dir: Path,
+    seed_rel: str,
+    source_repo_dir: Path,
+) -> tuple[dict[str, str], dict[str, dict]]:
+    """Merge custom skills, h2 distill edits, README rows, and sibling profile verifiers across existing skill directories into seed_dir."""
+    extra_readme_rows: dict[str, str] = {}
+    merged_repo_profiles: dict[str, tuple[bool, int, dict]] = {}
+
+    for dir_idx, sdir in enumerate(existing_skill_dirs):
+        readme_file = sdir / "README.md"
+        if readme_file.is_file():
+            for line in readme_file.read_text(encoding="utf-8").splitlines():
+                m_skill = re.search(r"\[([A-Za-z0-9_.-]+)\]\(\1/SKILL\.md\)", line)
+                if m_skill:
+                    extra_readme_rows.setdefault(m_skill.group(1), line)
+
+        prof_file = sdir / "harness2" / "profiles.json"
+        if prof_file.is_file():
+            try:
+                norm_prof = rewrite_skills_path_references(prof_file.read_text(encoding="utf-8"), seed_rel)
+                prof_data = json.loads(norm_prof)
+                mtime = prof_file.stat().st_mtime_ns
+                for repo_name, repo_spec in prof_data.get("repositories", {}).items():
+                    if not isinstance(repo_spec, dict):
+                        continue
+                    is_custom = repo_spec.get("default_verifier", "git status -sb") != "git status -sb"
+                    prev = merged_repo_profiles.get(repo_name)
+                    if prev is None or (is_custom, mtime, dir_idx) > (prev[0], prev[1], -1):
+                        merged_repo_profiles[repo_name] = (is_custom, mtime, repo_spec)
+            except Exception:
+                pass
+
+    if len(existing_skill_dirs) < 2:
+        return extra_readme_rows, {k: v[2] for k, v in merged_repo_profiles.items()}
+
+    template_skills_dir = source_repo_dir / ".github" / "skills"
+    rel_candidates: set[Path] = set()
+    for sdir in existing_skill_dirs:
+        for p in sdir.rglob("*"):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(sdir)
+            if not rel.parts or rel.parts[0].startswith(".") or rel == Path("README.md"):
+                continue
+            if rel == Path("harness2/profiles.json"):
+                continue
+            rel_candidates.add(rel)
+
+    for rel in sorted(rel_candidates):
+        present = [(idx, d / rel) for idx, d in enumerate(existing_skill_dirs) if (d / rel).is_file()]
+        if not present:
+            continue
+        seed_target = seed_dir / rel
+        seed_target.parent.mkdir(parents=True, exist_ok=True)
+
+        if not seed_target.is_file():
+            _, newest_src = max(present, key=lambda item: (item[1].stat().st_mtime_ns, item[0]))
+            norm_text = _read_normalized_skill_text(newest_src, seed_rel)
+            if norm_text is not None:
+                seed_target.write_text(norm_text, encoding="utf-8")
+            else:
+                shutil.copy2(newest_src, seed_target)
+            continue
+
+        if len(present) < 2:
+            continue
+
+        text_entries = [(idx, f, _read_normalized_skill_text(f, seed_rel)) for idx, f in present]
+        if all(t is not None for _, _, t in text_entries):
+            distinct_texts = {t for _, _, t in text_entries if t is not None}
+            if len(distinct_texts) <= 1:
+                continue
+            tmpl_candidates = [
+                template_skills_dir / rel,
+                seed_dir / ".tracker-templates" / rel,
+            ]
+            tmpl_norm: str | None = None
+            for tc in tmpl_candidates:
+                if tc.is_file():
+                    tmpl_norm = _read_normalized_skill_text(tc, seed_rel)
+                    break
+            customized = [item for item in text_entries if tmpl_norm is None or item[2] != tmpl_norm]
+            pool = customized if customized else text_entries
+            _, _, winning_text = max(pool, key=lambda item: (item[1].stat().st_mtime_ns, item[0]))
+            seed_norm = _read_normalized_skill_text(seed_target, seed_rel)
+            if winning_text is not None and winning_text != seed_norm:
+                seed_target.write_text(winning_text, encoding="utf-8")
+        else:
+            byte_entries = [(idx, f, f.read_bytes()) for idx, f in present]
+            if len({b for _, _, b in byte_entries}) <= 1:
+                continue
+            tmpl_bytes = (template_skills_dir / rel).read_bytes() if (template_skills_dir / rel).is_file() else None
+            customized_b = [item for item in byte_entries if tmpl_bytes is None or item[2] != tmpl_bytes]
+            pool_b = customized_b if customized_b else byte_entries
+            _, winning_file, _ = max(pool_b, key=lambda item: (item[1].stat().st_mtime_ns, item[0]))
+            if winning_file.resolve() != seed_target.resolve():
+                shutil.copy2(winning_file, seed_target)
+
+    return extra_readme_rows, {k: v[2] for k, v in merged_repo_profiles.items()}
 
 
 def prompt_text(label: str, default: str = "") -> str:
@@ -122,6 +310,38 @@ def prompt_choice(label: str, choices: list[tuple[str, str]], default: str) -> s
             if raw in choice_map:
                 return choice_map[raw]
             print(f"{YELLOW}Invalid choice, please select 1-{len(choices)} or enter choice key.{RESET}")
+        except (EOFError, KeyboardInterrupt):
+            print(f"\n{YELLOW}Setup cancelled.{RESET}")
+            sys.exit(0)
+
+
+def prompt_agents_selection(default: str = "all") -> str:
+    """Prompt interactively for one or more AI coding assistants (single choice, 'all', or comma-separated)."""
+    choices = [
+        ("all", "All supported tools (GitHub Copilot, Claude Code, OpenAI Codex, Cursor)"),
+        ("copilot", "GitHub Copilot (.github/copilot-instructions.md + .github/skills/)"),
+        ("claude", "Claude Code (CLAUDE.md + .claude/skills/)"),
+        ("codex", "OpenAI Codex (AGENTS.md + .agents/skills/)"),
+    ]
+    print(f"\n{BOLD}Which AI coding assistant(s) should this workspace be tailored for?{RESET}")
+    for idx, (key, desc) in enumerate(choices, 1):
+        indicator = f"{GREEN}*{RESET}" if key == default else " "
+        print(f"  {indicator} {BOLD}{idx}){RESET} {CYAN}{key}{RESET} - {desc}")
+    print(f"  {DIM}Tip: Enter 1-{len(choices)}, a tool key, or comma-separated tools (e.g. copilot,claude).{RESET}")
+
+    index_map = {str(idx): key for idx, (key, _) in enumerate(choices, 1)}
+    while True:
+        try:
+            raw = input(f"Select AI coding assistant(s) [{CYAN}{default}{RESET}]: ").strip()
+            if not raw:
+                return default
+            parts = [index_map.get(tok.strip(), tok.strip().lower()) for tok in raw.split(",") if tok.strip()]
+            normalized = ",".join(parts)
+            try:
+                parse_agents_selection(normalized)
+                return normalized
+            except ValueError as err:
+                print(f"{YELLOW}{err}{RESET}")
         except (EOFError, KeyboardInterrupt):
             print(f"\n{YELLOW}Setup cancelled.{RESET}")
             sys.exit(0)
@@ -991,6 +1211,7 @@ def _prompt_tracker_connection_details(cfg: WorkspaceConfig) -> None:
 def run_interactive_wizard(
     root: Path | None = None,
     explicit_output: Path | None = None,
+    explicit_agents: str | None = None,
 ) -> tuple[WorkspaceConfig, Path]:
     source_root = (root or Path(__file__).resolve().parent).resolve()
 
@@ -1064,6 +1285,14 @@ def run_interactive_wizard(
         print(f"\n{BLUE}{BOLD}--- Section 3: Tracker Connection Details ({setup_mode}) ---{RESET}")
         _prompt_tracker_connection_details(cfg)
 
+    print(f"\n{BLUE}{BOLD}--- Section 4a: AI Coding Assistants ---{RESET}")
+    if explicit_agents is not None:
+        apply_agents_selection(cfg, explicit_agents)
+        print(f"  {GREEN}✔{RESET} Using AI assistant selection from --agents: {CYAN}{explicit_agents}{RESET}")
+    else:
+        chosen_agents = prompt_agents_selection("all")
+        apply_agents_selection(cfg, chosen_agents)
+
     # Walk through token setup and live authentication verification before adding sibling repos
     run_interactive_auth_setup(cfg, target_root)
 
@@ -1136,6 +1365,7 @@ def render_workspace_config(cfg: WorkspaceConfig) -> str:
         "agents:",
         f"  copilot: {str(cfg.copilot).lower()}",
         f"  claude: {str(cfg.claude).lower()}",
+        f"  codex: {str(cfg.codex).lower()}",
         f"  cursor: {str(cfg.cursor).lower()}",
         "",
     ]
@@ -1459,6 +1689,8 @@ def load_workspace_config_from_dict(data: dict) -> WorkspaceConfig:
             cfg.copilot = bool(agents["copilot"])
         if "claude" in agents:
             cfg.claude = bool(agents["claude"])
+        if "codex" in agents:
+            cfg.codex = bool(agents["codex"])
         if "cursor" in agents:
             cfg.cursor = bool(agents["cursor"])
     else:
@@ -1466,6 +1698,8 @@ def load_workspace_config_from_dict(data: dict) -> WorkspaceConfig:
             cfg.copilot = bool(data["copilot"])
         if "claude" in data:
             cfg.claude = bool(data["claude"])
+        if "codex" in data:
+            cfg.codex = bool(data["codex"])
         if "cursor" in data:
             cfg.cursor = bool(data["cursor"])
 
@@ -1769,6 +2003,37 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
         else "across your configured repositories"
     )
 
+    cli_launch_cmds: list[str] = []
+    assistant_labels: list[str] = []
+    if cfg.copilot:
+        cli_launch_cmds.append(f"{CYAN}copilot --add-dir ..{RESET}")
+        assistant_labels.append("GitHub Copilot")
+    if cfg.claude:
+        cli_launch_cmds.append(f"{CYAN}claude --add-dir ..{RESET}")
+        assistant_labels.append("Claude Code")
+    if cfg.codex:
+        cli_launch_cmds.append(f"{CYAN}codex --add-dir ..{RESET}")
+        assistant_labels.append("OpenAI Codex")
+    if cfg.cursor:
+        assistant_labels.append("Cursor")
+    if not assistant_labels:
+        assistant_labels.append("AI Assistant")
+
+    assistant_header = " / ".join(assistant_labels)
+
+    if cfg.codex and not (cfg.copilot or cfg.claude):
+        chat_add_sibling_cmd = "Use add-sibling to onboard <git-url>"
+        first_add_sibling_prompt = (
+            f'     • {CYAN}"Use add-sibling to onboard <git-repo-url>"{RESET} '
+            "(or $add-sibling; inspects repo, asks for intent, and remaps AGENTS.md & architecture.md)"
+        )
+    else:
+        chat_add_sibling_cmd = "/add-sibling <git-url>"
+        first_add_sibling_prompt = (
+            f'     • {CYAN}"/add-sibling <git-repo-url>"{RESET} '
+            '(or "Use add-sibling to onboard <git-repo-url>"; inspects repo & remaps AGENTS.md)'
+        )
+
     lines = [
         f"\n{CYAN}{BOLD}==================================================================={RESET}",
         f"{MAGENTA}{BOLD}  🚀 Quick Primer: Getting Full Advantage of {cfg.name}{RESET}",
@@ -1776,7 +2041,13 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
         f"  {BOLD}1. Verify & Open Your Unified Workspace:{RESET}",
         f"     • Clone sibling repos : {CYAN}{py_cmd} scripts/clone_siblings.py{RESET}",
         f"     • Health diagnostics  : {CYAN}{py_cmd} scripts/workspace_doctor.py{RESET}",
-        f"     • Add repos anytime   : {CYAN}/add-sibling <git-url>{RESET} (in AI chat) or {CYAN}{py_cmd} bootstrap.py --add-sibling{RESET}",
+    ]
+    if cli_launch_cmds:
+        lines.append(
+            f"     • Launch terminal AI  : {'  |  '.join(cli_launch_cmds)}"
+        )
+    lines.extend([
+        f"     • Add repos anytime   : {CYAN}{chat_add_sibling_cmd}{RESET} (in AI chat) or {CYAN}{py_cmd} bootstrap.py --add-sibling{RESET}",
         f"     • Open multi-root IDE : {CYAN}code {cfg.slug}.code-workspace{RESET}",
         "",
         f"  {BOLD}2. How the Two-Mode AI Workflow Operates (AGENTS.md):{RESET}",
@@ -1787,11 +2058,11 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
         f"       is {BOLD}Done{RESET} and Effort is {BOLD}Small/Medium{RESET}. Keep {CYAN}docs/architecture.md{RESET} and",
         f"       {CYAN}GLOSSARY.md{RESET} updated as system contracts evolve.",
         "",
-        f"  {BOLD}3. Try These First Prompts in Your AI Assistant (Copilot / Claude / Cursor):{RESET}",
-        f"     • {CYAN}\"/add-sibling <git-repo-url>\"{RESET} (inspects repo, asks for intent, and remaps AGENTS.md & architecture.md)",
+        f"  {BOLD}3. Try These First Prompts in Your AI Assistant ({assistant_header}):{RESET}",
+        first_add_sibling_prompt,
         f"     • {CYAN}\"Use planning-scaffold to create our first epic and story in docs/planning/01/\"{RESET}",
         f"     • {CYAN}\"Run story-refiner on docs/planning/01/ to check Definition of Ready and sizing\"{RESET}",
-    ]
+    ])
     if onboard_skill:
         lines.append(
             f"     • {CYAN}\"Use {onboard_skill} to sync the ready story to {cfg.tracker_type} with bidirectional links\"{RESET}"
@@ -1807,7 +2078,10 @@ def render_onboarding_primer(cfg: WorkspaceConfig, py_cmd: str = "python") -> st
 
 def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     print(f"\n{GREEN}{BOLD}Scaffolding workspace in: {root}{RESET}")
-    
+    source_repo_dir = Path(__file__).resolve().parent
+    active_skill_rels = enabled_skill_dir_rels(cfg)
+    primary_skills_rel = active_skill_rels[0]
+
     # 1. Prepare template context variables
     siblings_agents_md = ""
     for s in cfg.siblings:
@@ -1862,37 +2136,62 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
         "SIBLINGS_YAML_LIST": siblings_yaml_list,
     }
 
-    # 2. Render core directive files
-    def render_file(src_name: str, dest_name: str):
+    # 2. Render core directive files (and remove disabled tool instruction files)
+    def render_file(
+        src_name: str,
+        dest_name: str,
+        skills_rel_override: str | None = None,
+    ) -> None:
         src = root / src_name
         dest = root / dest_name
         if src.is_file():
             content = src.read_text(encoding="utf-8")
             rendered = render_template_str(content, context)
+            if skills_rel_override is not None:
+                rendered = rewrite_skills_path_references(rendered, skills_rel_override)
+            dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(rendered, encoding="utf-8")
             print(f"  ✔ Created {dest_name}")
 
-    render_file("AGENTS.md.template", "AGENTS.md")
+    render_file("AGENTS.md.template", "AGENTS.md", skills_rel_override=primary_skills_rel)
     glossary_dest = root / "GLOSSARY.md"
     if not glossary_dest.exists() or "{{" in glossary_dest.read_text(encoding="utf-8"):
-        render_file("GLOSSARY.md.template", "GLOSSARY.md")
+        render_file("GLOSSARY.md.template", "GLOSSARY.md", skills_rel_override=primary_skills_rel)
     render_file("workspace.code-workspace.template", f"{cfg.slug}.code-workspace")
     (root / "workspace.yaml").write_text(render_workspace_config(cfg), encoding="utf-8")
     print("  Created workspace.yaml")
-    
+
+    claude_md_path = root / "CLAUDE.md"
     if cfg.claude:
-        render_file("CLAUDE.md.template", "CLAUDE.md")
+        render_file("CLAUDE.md.template", "CLAUDE.md", skills_rel_override=".claude/skills")
+    elif claude_md_path.exists():
+        claude_md_path.unlink()
+
+    cursorrules_path = root / ".cursorrules"
     if cfg.cursor:
-        render_file(".cursorrules.template", ".cursorrules")
+        render_file(".cursorrules.template", ".cursorrules", skills_rel_override=primary_skills_rel)
+    elif cursorrules_path.exists():
+        cursorrules_path.unlink()
+
+    copilot_instr_path = root / ".github" / "copilot-instructions.md"
     if cfg.copilot:
-        copilot_dir = root / ".github"
-        copilot_dir.mkdir(exist_ok=True)
-        render_file(".github/copilot-instructions.md.template", ".github/copilot-instructions.md")
+        render_file(
+            ".github/copilot-instructions.md.template",
+            ".github/copilot-instructions.md",
+            skills_rel_override=".github/skills",
+        )
+    else:
+        if copilot_instr_path.exists():
+            copilot_instr_path.unlink()
+        if root.resolve() != source_repo_dir:
+            copilot_agents_dir = root / ".github" / "agents"
+            if copilot_agents_dir.is_dir():
+                shutil.rmtree(copilot_agents_dir)
 
     # 3. Setup planning directory from chosen framework template
     planning_dir = root / "docs" / "planning"
     template_dir = planning_dir / "templates"
-    
+
     framework_map = {
         "safe": "pi-template",
         "scrum": "sprint-template",
@@ -1901,7 +2200,7 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     }
     chosen_template = framework_map.get(cfg.planning_framework, "sprint-template")
     source_template_dir = template_dir / chosen_template
-    
+
     first_timebox_dir = planning_dir / "01"
     if source_template_dir.is_dir() and not first_timebox_dir.exists():
         shutil.copytree(source_template_dir, first_timebox_dir)
@@ -1923,9 +2222,19 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
     env_example.write_text(render_env_example(cfg), encoding="utf-8")
     print("  ✔ Created .env.example (template for local authentication tokens)")
 
-    # 6. Prune irrelevant skill directories if requested
-    skills_dir = root / ".github" / "skills"
-    if skills_dir.is_dir():
+    # 6. Prune irrelevant tracker skills and synchronize native skill directories (no symlinks)
+    existing_skill_rels_and_dirs = [
+        (rel, root / rel) for rel in ALL_SKILL_DIR_RELS if (root / rel).is_dir()
+    ]
+    existing_skill_dirs = [d for _, d in existing_skill_rels_and_dirs]
+    if existing_skill_dirs:
+        seed_rel, seed_dir = existing_skill_rels_and_dirs[0]
+        extra_readme_rows, merged_repo_profiles = reconcile_skill_directories(
+            existing_skill_dirs,
+            seed_dir,
+            seed_rel,
+            source_repo_dir,
+        )
         all_tracker_skills = (
             "jira-story-onboard",
             "jira-status-sync",
@@ -1934,82 +2243,108 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
             "gitlab-issue-onboard",
             "ado-work-item-onboard",
         )
-        tracker_cache_dir = skills_dir / ".tracker-templates"
+        tracker_cache_dir = seed_dir / ".tracker-templates"
         tracker_cache_dir.mkdir(exist_ok=True)
-        skills_readme = skills_dir / "README.md"
+        skills_readme = seed_dir / "README.md"
         cached_readme = tracker_cache_dir / "README.md"
         if skills_readme.is_file() and not cached_readme.is_file():
             shutil.copy2(skills_readme, cached_readme)
         for t_skill in all_tracker_skills:
-            src_t = skills_dir / t_skill
+            src_t = seed_dir / t_skill
             dst_t = tracker_cache_dir / t_skill
             if src_t.is_dir() and not dst_t.exists():
                 shutil.copytree(src_t, dst_t)
 
         if cfg.tracker_type != "jira":
             for d in ("jira-story-onboard", "jira-status-sync"):
-                p = skills_dir / d
+                p = seed_dir / d
                 if p.exists():
                     shutil.rmtree(p)
         if cfg.tracker_type != "github":
             for d in ("github-issue-onboard", "github-status-sync"):
-                p = skills_dir / d
+                p = seed_dir / d
                 if p.exists():
                     shutil.rmtree(p)
         if cfg.tracker_type != "gitlab":
-            p = skills_dir / "gitlab-issue-onboard"
+            p = seed_dir / "gitlab-issue-onboard"
             if p.exists():
                 shutil.rmtree(p)
         if cfg.tracker_type != "azure-devops":
-            p = skills_dir / "ado-work-item-onboard"
+            p = seed_dir / "ado-work-item-onboard"
             if p.exists():
                 shutil.rmtree(p)
 
-        # Restore any missing skill for the active tracker_type from the local cache or template source
+        # Restore any missing skill for the active tracker_type from local cache or template source
         required_tracker_skills: dict[str, tuple[str, ...]] = {
             "jira": ("jira-story-onboard", "jira-status-sync"),
             "github": ("github-issue-onboard", "github-status-sync"),
             "gitlab": ("gitlab-issue-onboard",),
             "azure-devops": ("ado-work-item-onboard",),
         }
-        source_skills_dir = Path(__file__).resolve().parent / ".github" / "skills"
+        fallback_skill_parents = [
+            tracker_cache_dir,
+            *(d / ".tracker-templates" for d in existing_skill_dirs[1:]),
+            *(source_repo_dir / rel for rel in ALL_SKILL_DIR_RELS),
+        ]
         for skill_name in required_tracker_skills.get(cfg.tracker_type, ()):
-            dest_skill = skills_dir / skill_name
+            dest_skill = seed_dir / skill_name
             if not dest_skill.exists():
-                for candidate_parent in (tracker_cache_dir, source_skills_dir):
+                for candidate_parent in fallback_skill_parents:
                     src_skill = candidate_parent / skill_name
                     if src_skill.is_dir() and src_skill.resolve() != dest_skill.resolve():
                         shutil.copytree(src_skill, dest_skill)
                         break
 
-        # Keep .github/skills/README.md and AGENTS.md skill routing synchronized with retained skills
+        # Keep README.md skill index synchronized with retained and custom skills
         active_skill_names = {
             entry.name
-            for entry in skills_dir.iterdir()
+            for entry in seed_dir.iterdir()
             if entry.is_dir() and not entry.name.startswith(".")
         }
         readme_source = cached_readme if cached_readme.is_file() else skills_readme
         if readme_source.is_file():
             filtered_lines = []
+            indexed_skills: set[str] = set()
             for line in readme_source.read_text(encoding="utf-8").splitlines():
                 m_skill = re.search(r"\[([A-Za-z0-9_.-]+)\]\(\1/SKILL\.md\)", line)
-                if m_skill and m_skill.group(1) not in active_skill_names:
-                    continue
+                if m_skill:
+                    if m_skill.group(1) not in active_skill_names:
+                        continue
+                    indexed_skills.add(m_skill.group(1))
                 filtered_lines.append(line)
+            for custom_name in sorted(active_skill_names - indexed_skills):
+                if custom_name in extra_readme_rows:
+                    filtered_lines.append(extra_readme_rows[custom_name])
+                else:
+                    custom_desc = "Custom workspace procedure"
+                    custom_md = seed_dir / custom_name / "SKILL.md"
+                    if custom_md.is_file():
+                        m_desc = re.search(
+                            r"^description:\s*(.+)$",
+                            custom_md.read_text(encoding="utf-8"),
+                            re.MULTILINE,
+                        )
+                        if m_desc:
+                            custom_desc = m_desc.group(1).strip().strip("\"'")
+                    filtered_lines.append(
+                        f"| **Custom** | {custom_desc} | [{custom_name}]({custom_name}/SKILL.md) |"
+                    )
             skills_readme.write_text("\n".join(filtered_lines) + "\n", encoding="utf-8")
 
-        # Update .github/skills/harness2/profiles.json with workspace slug and active siblings
-        profiles_path = skills_dir / "harness2" / "profiles.json"
+        # Update harness2/profiles.json with workspace slug and active siblings
+        profiles_path = seed_dir / "harness2" / "profiles.json"
         if profiles_path.is_file():
             try:
                 profiles_data = json.loads(profiles_path.read_text(encoding="utf-8"))
                 repos_map = profiles_data.setdefault("repositories", {})
-                default_spec = repos_map.get("saiga-cart") or {
+                for r_name, r_spec in merged_repo_profiles.items():
+                    repos_map[r_name] = json.loads(json.dumps(r_spec))
+                base_spec = repos_map.get(cfg.slug) or repos_map.get("saiga-cart") or {
                     "domain": "Workspace planning, skills, and governance",
-                    "default_verifier": "python3 .github/skills/harness2/scripts/validate_harness.py && python3 .github/skills/planning-docs-audit/scripts/planning_docs_audit.py",
+                    "default_verifier": f"python3 {primary_skills_rel}/harness2/scripts/validate_harness.py && python3 {primary_skills_rel}/planning-docs-audit/scripts/planning_docs_audit.py",
                     "verifier_paths": [
-                        ".github/skills/harness2/scripts/validate_harness.py",
-                        ".github/skills/planning-docs-audit/scripts/planning_docs_audit.py",
+                        f"{primary_skills_rel}/harness2/scripts/validate_harness.py",
+                        f"{primary_skills_rel}/planning-docs-audit/scripts/planning_docs_audit.py",
                     ],
                     "inv_levers": [
                         "Verify AGENTS.md budget, skill frontmatter, and README index parity.",
@@ -2020,7 +2355,7 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
                         "Keep instructions concise and aligned with ASD-STE100 plain-language rules.",
                     ],
                 }
-                repos_map[cfg.slug] = default_spec
+                repos_map[cfg.slug] = json.loads(json.dumps(base_spec))
                 for s in cfg.siblings:
                     if s.access != "read-only":
                         if s.name not in repos_map:
@@ -2042,6 +2377,65 @@ def generate_workspace(cfg: WorkspaceConfig, root: Path) -> None:
                 profiles_path.write_text(json.dumps(profiles_data, indent=2) + "\n", encoding="utf-8")
             except Exception:
                 pass
+
+        # Copy active skills into each enabled tool's native discovery directory & rewrite paths
+        for target_rel in active_skill_rels:
+            target_dir = root / target_rel
+            if target_dir.resolve() != seed_dir.resolve():
+                if target_dir.exists():
+                    shutil.rmtree(target_dir)
+                target_dir.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(seed_dir, target_dir)
+
+            for skill_md in sorted(target_dir.glob("*/SKILL.md")):
+                original = skill_md.read_text(encoding="utf-8")
+                rewritten = rewrite_skills_path_references(original, target_rel)
+                if rewritten != original:
+                    skill_md.write_text(rewritten, encoding="utf-8")
+
+            target_profiles = target_dir / "harness2" / "profiles.json"
+            if target_profiles.is_file():
+                original_prof = target_profiles.read_text(encoding="utf-8")
+                rewritten_prof = rewrite_skills_path_references(original_prof, target_rel)
+                if rewritten_prof != original_prof:
+                    target_profiles.write_text(rewritten_prof, encoding="utf-8")
+
+            print(f"  ✔ Synchronized skills in {target_rel}/")
+
+        # Remove disabled skill directories and clean up empty parent folders
+        for cand_rel in ALL_SKILL_DIR_RELS:
+            if cand_rel not in active_skill_rels:
+                disabled_dir = root / cand_rel
+                if disabled_dir.exists():
+                    shutil.rmtree(disabled_dir)
+                parent_dir = disabled_dir.parent
+                if parent_dir.is_dir() and not any(parent_dir.iterdir()):
+                    parent_dir.rmdir()
+
+    # 7. Align internal skills path references in workspace docs & CI workflows
+    doc_candidates: list[Path] = [
+        root / "GLOSSARY.md",
+        root / "README.md",
+        root / "CONTRIBUTING.md",
+        root / "docs" / "workflow.md",
+        root / "docs" / "ci-cd.md",
+        root / "docs" / "ai" / "experience.md",
+        root / ".gitlab-ci.yml",
+    ]
+    for glob_base, pattern in (
+        (root / "docs" / "adr", "*.md"),
+        (root / "docs" / "ai" / "wow-adr", "*.md"),
+        (root / ".github" / "workflows", "*.yml"),
+    ):
+        if glob_base.is_dir():
+            doc_candidates.extend(sorted(glob_base.glob(pattern)))
+
+    for doc_path in doc_candidates:
+        if doc_path.is_file():
+            orig_doc = doc_path.read_text(encoding="utf-8")
+            updated_doc = rewrite_skills_path_references(orig_doc, primary_skills_rel)
+            if updated_doc != orig_doc:
+                doc_path.write_text(updated_doc, encoding="utf-8")
 
     print(f"\n{GREEN}{BOLD}🎉 Workspace successfully bootstrapped!{RESET}")
     print_token_setup_instructions(cfg)
@@ -2224,12 +2618,25 @@ def parse_args() -> argparse.Namespace:
         choices=["github-scrum", "jira-safe", "ado-scrum", "azure-devops"],
         help="Preset configuration",
     )
+    parser.add_argument(
+        "--agents",
+        type=str,
+        default=None,
+        help="AI coding assistant(s) to configure: copilot, claude, codex, all, or comma-separated (e.g. copilot,claude)",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     print_banner()
+
+    if args.agents is not None:
+        try:
+            parse_agents_selection(args.agents)
+        except ValueError as error:
+            print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
+            raise SystemExit(2)
 
     source_dir = Path(__file__).resolve().parent
     explicit_output = args.output.resolve() if args.output is not None else None
@@ -2242,6 +2649,8 @@ def main() -> None:
             raise SystemExit(2)
         try:
             cfg = load_workspace_config(ws_path)
+            if args.agents is not None:
+                apply_agents_selection(cfg, args.agents)
         except (ValueError, FileNotFoundError) as error:
             print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)
@@ -2282,12 +2691,16 @@ def main() -> None:
         config_path = args.config.resolve()
         try:
             cfg = load_workspace_config(config_path)
+            if args.agents is not None:
+                apply_agents_selection(cfg, args.agents)
             output = prepare_output_directory(source_dir, explicit_output or config_path.parent)
         except (ValueError, FileNotFoundError) as error:
             print(f"{YELLOW}ERROR loading config: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)
     elif args.preset or args.non_interactive:
         cfg = build_preset_config(args.preset or "github-scrum")
+        if args.agents is not None:
+            apply_agents_selection(cfg, args.agents)
         if explicit_output and explicit_output != source_dir:
             derived_slug = re.sub(r"[^a-z0-9]+", "-", explicit_output.name.lower()).strip("-")
             if derived_slug:
@@ -2300,7 +2713,11 @@ def main() -> None:
     else:
         is_interactive = True
         try:
-            cfg, output = run_interactive_wizard(source_dir, explicit_output=explicit_output)
+            cfg, output = run_interactive_wizard(
+                source_dir,
+                explicit_output=explicit_output,
+                explicit_agents=args.agents,
+            )
         except ValueError as error:
             print(f"{YELLOW}ERROR: {error}{RESET}", file=sys.stderr)
             raise SystemExit(2)

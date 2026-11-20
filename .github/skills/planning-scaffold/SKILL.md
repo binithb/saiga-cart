@@ -18,7 +18,7 @@ Create and structure planning artifacts under `docs/planning/` using committed t
    - Pre-onboarding stories may use `<story-slug>.md` (or temporary `<NN>-<story-slug>.md`); once onboarded to an issue tracker, the filename becomes `<story-slug>-<TICKET-KEY>.md` with any leading numeric prefix (`01-`, `02-`) removed.
 3. **Recurring Epics (`Recurring | Yes`) & Backlog Scratchpads**:
    - Epics that carry over across timeboxes (such as tech-debt, security patching, operational maintenance, or Harness² evolution) set `| Recurring | Yes |` in their epic `plan.md` metadata table.
-   - When scaffolding a new timebox/PI/sprint, inspect the immediately preceding timebox for epics with `| Recurring | Yes |` and offer (via `ask_user`) to carry them forward into the new timebox, migrating any unfinished stories (`Status != Done`) and optional `stories/backlog-scratchpad.txt` notes.
+   - When scaffolding a new timebox/PI/sprint, inspect the immediately preceding timebox for epics with `| Recurring | Yes |` and offer via interactive user confirmation (`ask_user` / `AskUserQuestion` or direct prompt) to carry them forward into the new timebox, migrating any unfinished stories (`Status != Done`) and optional `stories/backlog-scratchpad.txt` notes.
 
 ## Procedure
 

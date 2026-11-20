@@ -10,8 +10,8 @@ Turn a local story markdown file into a tracked Azure DevOps Work Item with bidi
 
 ## Mandatory 3-Step Onboarding Procedure
 
-1. **Confirm (`ask_user`) & Create Work Item**:
-   - Present the proposed title, work item type (`User Story` or `Task`), and functional description via `ask_user`.
+1. **Interactive User Confirmation & Create Work Item**:
+   - Present the proposed title, work item type (`User Story` or `Task`), and functional description for interactive user confirmation (`ask_user` / `AskUserQuestion` or explicit approval prompt).
    - After user confirmation, create the work item via `az boards work-item create --title "<title>" --type "User Story" --description "<functional-desc>"` and attach the repository story permalink.
 2. **Rename File (Strip Numeric Prefix + Append Key) & Update Metadata**:
    - Rename the story file via `git mv` to remove any leading numeric prefix (`01-`, `02-`) and append `-AB-<ID>.md` (e.g., `stories/01-auth-flow.md` $\rightarrow$ `stories/auth-flow-AB-123.md`).
